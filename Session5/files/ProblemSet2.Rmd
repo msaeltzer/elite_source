@@ -1,0 +1,64 @@
+---
+title: "Task2"
+author: "Marius Saeltzer"
+date: "25 Februar 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This is a problem set. We start in course where your group members and me can help you if necessary.
+
+On the homepage of the Bundeswahlleiter, we find the following file: 
+
+# Task 1: Import
+
+https://www.bundeswahlleiter.de/dam/jcr/72f186bb-aa56-47d3-b24c-6a46f5de22d0/btw17_kerg.csv
+
+It looks quite messy. Find a way to import it correctly and give it meaningful column names (using names, gsub etc)
+
+Make sure numbers and encodings are correct!
+
+Compute the relative voteshares of each party!
+
+Give all columns the approriate data type. 
+
+Save it as a new csv file.
+    
+```{r}  
+
+bt1<-read.csv("./btw_kerg/btw2017_kerg.csv")
+
+
+
+```
+
+## Task 2 Extract (after Session 6)
+
+Find out which MP served the longest in Bundestag based on the Stammdaten Database.
+
+```{r}  
+
+
+
+```
+
+
+Find out which candidates exited the parliament early (earlier than other members of the same period).
+```{r}  
+
+
+
+```
+
+
+## Task 3: Merge! (after Session 6)
+
+Merge the MP Dataset we had in class with the Election results. Compute the individual voteshare for each MP and the share of his party's Zweitstimme (list vote) in his district. Which MPs outperform their party?
+```{r}
+
+
+```
+

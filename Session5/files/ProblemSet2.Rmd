@@ -56,8 +56,24 @@ Find out which candidates exited the parliament early (earlier than other member
 
 ## Task 3: Merge! (after Session 6)
 
-Merge the MP Dataset we had in class with the Election results. Compute the individual voteshare for each MP and the share of his party's Zweitstimme (list vote) in his district. Which MPs outperform their party?
+Merge the MP Dataset we had in class with the Election results.
+
+
+Compute the individual voteshare for each MP and the share of his party's Zweitstimme (list vote) in his district. Which MPs outperform their party?
 ```{r}
+
+# Bundeswahlleiter Wahlergebnisse/Election Results
+
+bw<-read.csv("https://www.bundeswahlleiter.de/dam/jcr/72f186bb-aa56-47d3-b24c-6a46f5de22d0/btw17_kerg.csv")
+
+
+# Individual level Data MP 
+  # Stammdaten XML
+  # Import from Bundeswahlleiter
+
+bt<-read.csv('https://www.bundeswahlleiter.de/dam/jcr/0f2b4e8f-3057-4abf-9e43-baf593800f11/btw17_gewaehlte_utf8.csv',skip = 6,sep=";",dec = ",",encoding="UTF-8",stringsAsFactors = F)
+
+
 
 
 ```

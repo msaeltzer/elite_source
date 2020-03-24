@@ -12,588 +12,214 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 if(!require(tidyverse)){install.packages("tidyverse")}
-
+if(!require(openxlsx)){install.packages("openxlsx")}
 if(!require(readstata13)){install.packages("readstata13")}
 if(!require(knitr)){install.packages("knitr")}
 if(!require(jsonlite)){install.packages("jsonlite")}
 if(!require(xml2)){install.packages("xml2")}
 if(!require(foreign)){install.packages("foreign")}
 if(!require(rvest)){install.packages("rvest")}
-
-
-
 ```
-# Session III: Importing Data into R
-
-
-Session II: Reading in Data and working with it!
-
-Now we see that R can be used to create and manipulate objects which contain values. In the end, all data operations can be reduced to this. But to do statstics, we will want to read in real data.
-
-## Reading in Data
-
-For today, we will use existing data based on Stier et al. 2018 to get an overview who is on twitter. We will treat R as if it is stata and not go into details of data structures up until week 5.
-
-First, we need to set a working directory.
-
-### Directories
-
-The workind directory is the place on a drive where you store stuff. It allows you to directly call files without their exact location.
-
-Also: Defining a Project in Rstudio
-
-```{r}
-
-#setwd('C:\Users\admin\Documents\Lehre\Lehre FSS 19\Data')
-
-``` 
-You will get an error message.
-
-
- copy your path: 
-     
-     Windows: go to the place where the file is placed, click on the path in 
-              copy it and replace all \ with / 
-    
-    Trick: copy and paste a file into the the script,  remove the beginning and the name of the actual file
-    
-     Apple: go to the folder, rightclick, advanced, copy path, paste in here
-
-    
-
-```{r}
-
-setwd('C:/Users/admin/Documents/Lehre/Lehre FSS 19/Data')
-
-```
-
-
-## File Management
-
-
-```{r}
-
-# go UP in the tree
-setwd("..")
-
-#go down into a subdirectory
-```
-
-R allows to manipulate directories!
-
-```{r}
-
-dir.create("files")
-
-setwd("./files")
-
-```
-
-## RMD Files
-
-Rmd files use the directory where they are placed in as working directories. If you change them in code, they will only change for one chunk!
-
-```{r}
-setwd("./files")
-getwd()
-```
-
-After the chunk, wd is again the root wd!
-```{r}
-getwd()
-```
-
-You can go to the files tab in the help area of RStudio or directly access it by using:
-
-```{r}
-list.files()
-
-```
-
-## R Projects
-
-Another way to store data and set a working directory is to create a project. (the button with PLUS and R next to new script)
-
-You can save all your work in one folder and reactivate. Problem if this is not your own computer!
-
-###  Loading in Data 
-
-We can import all kinds of data, there are two places where to look for: locally and in the internet. 
-
-
-This can be a path on your computer, but also an URL.
-
-
-
-
-### R's very Own data 
-
-R like Stata and SPSS has its own form of storing data.
-
-You can save and load any object from R, even if it would not fit into a classical rectangular dataset. Of course, this can't be opened with other programs but can is very efficient in terms of speed and memory usage. Workspaces can contain dataframes or more complex objects like lists, regression models or even plots.
-
-```{r}
-
-load('raw_profiles_bundestag.Rdata')
-
-
-golombeck<-all[[1]]
-
-```
-
-Every read function has a mirroring WRITE or save function
-
-```{r}
-
-save(golombeck,file='golombeck.Rdata')
-
-```
-
-RDS files are like workspaces, but are to be assigned. Here we have a frame of all speeches in the recent Bundestag up until December 2019
-
-```{r}
-
-r1<-readRDS('bt19full.RDS')
-
-afd<-r1[r1$fraktion=="AfD",]
-
-
-```
-
-You can also save it out.
-```{r}
-
-saveRDS(afd,'afd_speeches.RDS')
-
-```
-
-## The Delim File Formats
-
-#### csv
-
-read.csv is a function. It takes arguments and turns it into something. There are quite many arguments of the read.table, you can tell the computer very precisely what to do  including what the separator is, how quotes are defined, if there is a header line and million ither things. 
-
-
-```{r}
-
-#?read.table()
-
-```
-
-As you can see in the help file, the function has a number of arguments, most importantly FILE which tells the computer what to open. 
-read.csv is a special case of read.table which has a lot decided before, like what kind of file it is supposed to open. The default is the
-Comma-separated values file, the mighty CSV.
-
-It is by far the most common way of storing data. This is what people mostly refer to as "excel-file", which is just a csv that is rendered unreadible for anyone unwilling to pay for it. Let's try it out. 
-
-```{r}
-c1<-read.csv('congress1.csv')
-
-```
-
-The computer splits values in columns by the comma. As you can see, it interprets the first line as column names by default and imports all strings as factors.
-
-```{r}
-
-frc<-read.csv("house_district_forecast.csv")
-```
-
-
-Of course, this course could end here if there weren't all these little differences. Let's import the product of a true German institution.
-
-
-```{r}
-bt<-read.csv('https://www.bundeswahlleiter.de/dam/jcr/0f2b4e8f-3057-4abf-9e43-baf593800f11/btw17_gewaehlte_utf8.csv')
-
-```
-
-Ouch. That is a mess.
-
-First, they put some wierd stuff in there in the first lines. WHO DOES THIS TO A TABLE?
-```{r}
-bt<-read.csv('https://www.bundeswahlleiter.de/dam/jcr/0f2b4e8f-3057-4abf-9e43-baf593800f11/btw17_gewaehlte_utf8.csv',skip = 6)
-```
-
-Now we only have one column. What is the problem? The separator in German csv's is default semicolon. 
-
-Tabstop
-Comma
-Semicolon
-Colon
-
-```{r}
-bt<-read.csv('https://www.bundeswahlleiter.de/dam/jcr/0f2b4e8f-3057-4abf-9e43-baf593800f11/btw17_gewaehlte_utf8.csv',skip = 6,sep=";")
-```
-
-But of course, very importantly for statistics, we use different decimal points.
-
-Instead of 
-.
-we let the computer interpret 
-,
-
-as the decimal point. Otherwise, he will not only consider these numbers in a wrong way, he will consider it TEXT. And even worse than that, as it is text, he will consider it factors.
-
-So we have to adjust.
-
-```{r}
-bt<-read.csv('https://www.bundeswahlleiter.de/dam/jcr/0f2b4e8f-3057-4abf-9e43-baf593800f11/btw17_gewaehlte_utf8.csv',skip = 6,sep=";",dec = ",")
-```
-
-
-Now, we have reached the end, right? But no, if we look at the letters the data base imported, we see that the German special characters are not correct. Why is that?
-
-
-### The Terror of the ENCODINGS
-
-One typical problem of many users is the encoding issue. But once we understood why we need encodings and how they work, we can deal with this.
-
-
-Any language has to be expressed in a limited number of characters, which again have to be coded down to 1 and 0 for the computer to understand. Encodings are translation schemes. The more different characters you want to express, the more complex the 0-1 scheme has to become to create a higher number of unique characters. The simplest code, programming code, is coded in ASCII. A very compex coding scheme such as UTF-32, which can contain 2^32 different characters, will be 4x as memory intensive as UTF-8, which can only store 2^8 values. Accordingly, most institutions use 8-bit systems appropriate for their language and those very close to them. 
-
-
-
-
-Here the provider tells us in the file-title.
-```{r}
-
-bt<-read.csv('https://www.bundeswahlleiter.de/dam/jcr/0f2b4e8f-3057-4abf-9e43-baf593800f11/btw17_gewaehlte_utf8.csv',skip = 6,sep=";",dec = ",",encoding="UTF-8",stringsAsFactors = F)
-
-```
-If not, we can use the rvest package!
-```{r}
-rvest::guess_encoding(bt)
-```
-
-
-### Foreign Formats
-
-There is a read function for almost any format you can imagine, although in many cases you have to activate an expansion.
-
-```{r}
-library(foreign)
-library(readstata13)
-
-
-list.files()
-fr1<-read.dta13("ZA5861_v1-0-0.dta")
-fr2<-read.spss("ZA5861_v1-0-0.sav",to.data.frame = T)
-```
-
-
-What can we do with a data set, once we have it?
-
-
-## Subsetting 
-
-Sometimes, you don't need all the data stored in a file. It might contain irrelevant data that would bias aggregation or simply relates to observations you don't care about. Let's just focus on the major parties of our large polling data set!
-
-```{r}
-dems<-frc[frc$party=="D",]
-
-frc<-frc[frc$party=="D"|frc$party=="R",]
-
-```
-
-
-
-## Dates
-
-Date variables have very useful attributes. 
-
-```{r}
-
-
-frc$forecastdate<-as.Date(frc$forecastdate)
-
-ss<-frc[frc$forecastdate>"2018-08-12",]
-
-```
-
-Just, as a brief exmaple: How do we deal with German Dates?
-
-```{r}
-
-ger_birthdate<-c("01.01.2010","15.02.2015","01.07.1995","01.11.2003")
-
-#df$ger_birthdate<-as.Date(df$ger_birthdate)
-
-ger_birthdate<-as.Date(ger_birthdate,format = "%d.%m.%Y") # day, month, year 
-
-ger_birthdate
-
-```
-
-## Dealing with Strings 
-
-As we debated earlier, character strings are important for our understanding of data. For example, we could be interested in looking at all columns that relate to the voting result, we could look for variables containing the word "vote".
-
-```{r}
-
-names(frc)
-
-grepl("vote",names(frc))
-
-```
-R provides numerous tools to work with them
-We can use them just as logical conditions
-```{r}
-frc[,grepl("vote",names(frc))]
-
-```
-
-But we can't only ask for text, we can also manipulate it!
-
-
-We can also create text automatically. We first copy the data set and mess around with the copy  ;)
-
-```{r}
-frc2<-frc
-names(frc2)<-paste0("var_",
-                 seq(
-                   from=1,to=length(names(frc2)))
-                 )
-
-```
-
-get specific elements out of it
-
-```{r}
-substr(names(frc2),start=5,stop=6)
-
-```
-
-Or manipulate them based on expressions
-
-```{r}
-
-names(frc2)<-gsub("var","variable",names(frc2))
-
-```
-
-Names are just a specific character vector. We can do this to any character
-
-
-```{r}
-
-frc$candidate<-as.character(frc$candidate)
-
-# for example, get all the Johns
-
-frc$candidate[grepl("John ",frc$candidate)]
-
-
-```
-
-
-
-
-### Now you can solve Problem Set 2.1!
-
-
-## Complex Data Structures
-
-Not all data can be stored in a rectangular form. Often data is closer to a list than a data frame. There are two main file formats that allow storing structured, not rectangular data. 
-
-    XML
-    
-    JSON
-    
-Both types store information hierarchically and can therefore combine data sets that are related, but not combineable. For example, I will get data for the German Bundestag from abgeordnetenwatch.de    
-
-### From JSON/XML
-
-Using the jsonlite package, we have the importing function. In this case, we get data directly from the homepage!
-
-```{r}
-library(jsonlite)
-
-f2<-fromJSON("http://www.abgeordnetenwatch.de/api/v2/candidacies-mandates?parliament_period=111&type=mandate")
-
-
-```
-
-Now, we have an overview over all data sources regarding the Bundestag. A brief look reveals information about where to find the MP profiles, but also the election periods. There is no obvious way to merge them, but of course they are hierarchically placed under Bundestag. JSON and XML therefore allows storing connected data.
-
-```{r}
-
-data<-f2$data
-
-f2$data$parliament_period
-
-f2$data$politician
-
-```
-
-JSON and XML are very closely related in their logic. Let's look at a hyper nested xml file, the Stammdaten-xml of Bundestag Open data:we import it using the xml2 package.
-
-```{r}
-list.files()
-
-library(xml2)
-
-r<-read_xml("MDB_STAMMDATEN.XML" )
-r1<-as_list(r)
-
-
-
-r1$DOCUMENT$MDB
-
-
-r1$DOCUMENT[[457]] 
-```
-
-We transform it into a nested list. You can also use html code directly to speak to the raw xml file if you feel more comfortable!
-
-r1
-|
-document
-    |
-mdb1 mdb2 mdb3 mdb4
-                |
-          id names  biography periods
-                        |          |
-                      birthday     |
-                      gender       |
-                      religion     |
-                                  election period1: party, mandate type...
-                                  election period2: party, mandate type...
-                                  
-                                  
-```{r}
-
-mdb4<-r1$DOCUMENT[[4]]$NAMEN$NAME
- 
-
-```
-
-So you can see, we have infinentely nested data! This is one of the reasons why a strong command of lists is so important. To get the information about each MP, we need to find ways to extract the data we want and need from a large number of complicated list structures. To do so, we need automatization and, to make it ever more clean, functionalizing data.
-
-
-# Automating R
-
-Using R as a statistical package or a calculator is a nice thing. But it gets its real power from programming automatized repetitions. 
-
-
-## Control Flow
-
-For loops repeat a process following a sequence. We use i or any other index as a variable. It replaces all instances of i in the curvy brackets. Therefore we can repeat something for each index. 
-
-```{r}
-
-home<-c("House","Flat","Shelter")
-
-for(i in 1:length(home)){print(home[i])}
-
-```
-
-
-```{r}
-r2<-r1$DOCUMENT
-
-for(i in 1:length(r2)){
-print(r2[[i]]$NAMEN$NAME$NACHNAME)
-}
-
-
-```
-
-Woah - let's not print this but store it in an object
-
-```{r}
-
-mdbs<-c()
-for(i in 1:length(r2)){
-mdbs[i]<-r2[[i]]$NAMEN$NAME$NACHNAME[[1]]
-}
-```
-
-Ok. Let's get the Place reference in some names
-
-```{r}
-places<-c()
-for(i in 1:length(r2)){
-places[i]<-r2[[i]]$NAMEN$NAME$ORTSZUSATZ[[1]]
-}
-```
-As we can see here, the "Subscript is out of bounds". In other words, the loop does not find the address and says "noone here", throwing an error. But, we can handle this by telling the computer what should happen then.
-
-## If - statements
-
-The if statement is made up of a condition (a logical expression that can be true or false)
-
-```{r}
-places<-c()
-
-for(i in 1:length(r2)){
-if(length(r2[[i]]$NAMEN$NAME$ORTSZUSATZ)==0){ 
-places[[i]]<-NA
-}else
-places[i]<-r2[[i]]$NAMEN$NAME$ORTSZUSATZ[[1]]
-}
-
-
-
-
-```
-
-This is an important way of handling errors: making the code respond correctly to any condition!
-
-For loops are useful tools, as they are programmable from ground up. You can tell the computer precisely what it needs to do. But, in contrast to other programming languages, loops are not very fast. This will be noticeable in larger datasets. But, R also contains a very elegant and very fast way of dealing with automated processes, the so called apply family. 
-
-
-## apply
-
-sapply
-lapply
-mapply
-apply
-
-that all refer to different object types. We will mainly use the lapply loop, because it is the most generic and can handle 99 percent of problems.
-
-```{r}
-mdbs<-lapply(r2,function(x) x$NAMEN$NAME$NACHNAME[[1]])
-
-``` 
-
-
-
-As you can see, it returns a list. This is very comfortable if you want to keep list objects the way they were, but to turn it into a vector, you still need to unlist them.
-
-Unlist flattens everything into a vector:
-```{r}
-
-mdbs<-unlist(mdbs)
-
-
-``` 
-Be careful that you only turn lists that look like vectors into vectors ;)
-
-
-Sadly, this will not work as easily for the Place problem, as we can't tell the computer easily what to do with each individual object. So instead, we need to hide this little workaround elsewhere. The best and easiest way is to functionalize your code. Functions are not just things to learn by heart or import with packages, you can always write your own functions.
-
-## functionalizing
-
-```{r}
-
-get_place<-function(x){
-  if(length(x$NAMEN$NAME$ORTSZUSATZ)>0){
-  return(x$NAMEN$NAME$ORTSZUSATZ[[1]])}else{
-    return(NA)}
-}
-
-places<-unlist(lapply(r2,get_place))
-
-```
-
-### Now you can solve Problem Set 2.2!
-
-After finding out how we can get data into R and how to extract specific elements, we now learn how to organize data structures. 
-
-
-
 
 # Organizing Data in R
+
+
+
+
+# Ordering data
+```{r}
+
+c1<-read.csv("candidate_summary_2020.csv",stringsAsFactors = F)
+
+c2<-c1[c1$Cand_Party_Affiliation=="DEM"|c1$Cand_Party_Affiliation=="REP",]
+c3<-c2[c2$Cand_Office=="H",]
+```
+
+Now let's see what's inside! Are these primary candidates? Let us check the run-off structure of an example district.
+
+https://ballotpedia.org/Alabama%27s_1st_Congressional_District_election,_2020
+
+To get to it, we need to ORDER the dataframe:
+
+
+```{r}
+
+c3<-c3[order(c3$Cand_Office_St,c3$Cand_Office_Dist,c3$Cand_Party_Affiliation),]
+
+names(c1)
+
+```
+
+As we can see, this is primary level candidate level data. But what if we are not only interested in a candidate's finances, but in a candidate's sociodemographics? What if we need data from other sources? 
+
+## Combinining Data
+
+The process of combining two data sets is called merging or joining data. To do so, we need a common identifier to match only things that are the same.
+
+
+```{r}
+
+library(openxlsx)
+d1<-read.xlsx("Dataset Political Elites.xlsx")
+d1<-d1[d1$Election=="House",]
+names(d1)
+
+```
+
+As we can see, there are much more data points in the final campaign finance data set. It seems like the second data set mainly addresses the run-off primary candidates. Let's see whether we can combine them. 
+
+To do so, we need a identifier variable. But this is not that easy, since d1 doesn't have a unique identifier, only names. c3 on the other hand has only a single name column. So what can we do beyond changing this by hand?
+
+We know that the last name is split by a COMMA in the FEC data set. 
+
+### Homogenizing a Merging Variable
+
+
+It is very important to make sure the unqiue values are homogeneous and of the same type. Little differences in spelling will lead to a mismatch. The best way is to use not name, but unique id, suchn as a number stored in a string.
+
+
+```{r}
+names1<-strsplit(c3$Cand_Name,",")
+
+```
+
+This now returns a list. As we learned from dataset operations before, we can now extract this using lapply.
+
+```{r}
+
+c3$lastname<-unlist(lapply(names1,function(x) x[[1]]))
+
+c3$firstname<-unlist(lapply(names1,function(x) ifelse(length(x)==1,NA,x[[2]])))
+
+
+```
+
+The second problem is that the NAME variables in d1 are not capitalized. Let's change this and create a merging variable, using toupper.
+
+```{r}
+
+d1$lastname<-toupper(d1$Name)
+d1$firstname<-toupper(d1$First.Name)
+```
+
+
+Before we start, the benchmark is the number of rows in d1, as we assume that all candidates from d1 are in c3, but not all in c3 are d1.
+
+```{r}
+
+dc<-merge(d1,c3,by="lastname",all.y=T)
+
+```
+
+EWW we now have more obervations in the final dataset then the in the larger original one. This looks like a multimatch problem.
+
+Of course, this is the case because we habe multiple surnames multiple times.
+
+
+```{r}
+
+sum(table(d1$lastname)>1)
+
+```
+We have 92 duplicate surnames.
+
+
+We can also match on multiple variables!
+
+```{r}
+
+dc<-merge(c3,d1,by=c("lastname","firstname"))
+
+```
+
+Wow. 2 Matches. What now? The splitting still included some whitespaces. Let's try again.
+```{r}
+c3$firstname<-trimws(c3$firstname)
+dc<-merge(c3,d1,by=c("lastname","firstname"))
+
+```
+
+
+This is still very bad. The first names are usually super messy as there are dozens of ways to write a first name, using different abbreviation conventions. 
+
+To take a look at the mismatches, we can use the all argument to keep all values in the data set.
+```{r}
+dc<-merge(c3,d1,by=c("lastname","firstname"),all.y=T)
+names(dc)
+
+```
+
+
+Now we have two strategies: homogenize the first name or choose a different variable to merge:
+
+Little Homework: Find a way to homogenize first names! 
+
+
+Let's look at another highly varying variable!
+
+
+```{r}
+dis<-strsplit(d1$District,"-")
+
+d1$Cand_Office_St<-unlist(lapply(dis,function(x)x[[1]]))
+d1$Cand_Office_Dist<-unlist(lapply(dis,function(x)x[[2]]))
+
+# in c3, AT large gets number 0
+
+d1$Cand_Office_Dist<-ifelse(d1$Cand_Office_Dist=="AL","0",d1$Cand_Office_Dist)
+
+d1$Cand_Office_Dist<-as.numeric(d1$Cand_Office_Dist)
+
+
+dc<-merge(c3,d1,by=c("lastname","Cand_Office_St","Cand_Office_Dist"))
+
+```
+
+Still only 745/1002
+
+
+```{r}
+d1$lastname<-trimws(d1$lastname)
+c3$lastname<-trimws(c3$lastname)
+
+
+dc<-merge(c3,d1,by=c("lastname","Cand_Office_St","Cand_Office_Dist"),all.y = T)
+
+```
+
+```{r}
+
+unique(d1$Cand_Office_St)
+
+unique(d1$Cand_Office_St)[order(unique(d1$Cand_Office_St))]
+unique(c3$Cand_Office_St)[order(unique(c3$Cand_Office_St))]
+
+unique(d1$Cand_Office_St)%in%unique(c3$Cand_Office_St)
+
+
+
+
+
+```
+
+
+Hawai was coded as HA, not HI
+```{r}
+
+d1$Cand_Office_St<-ifelse(d1$Cand_Office_St=="HA","HI",d1$Cand_Office_St)
+d1$Cand_Office_St<-ifelse(d1$Cand_Office_St=="CN","CT",d1$Cand_Office_St)
+
+
+dc<-merge(c3,d1,by=c("lastname","Cand_Office_St","Cand_Office_Dist"),all.y=T)
+
+```
+
+In contrary to our prior beliefs, the FEC database is not complete. Candidates like Jeffrey Alberts Indiana-4 are missing from the FEC, so ballotpedia seems to have more complete information!
+
+
+
+## Level of Analysis
+
 
 Data storage's most important feature is unit of analysis. Unit of analysis describes the meaning of a line or row in a data set. Unit of analysis could be the individual (in a cross sectional design), but also groups of individuals (party) or multiple observations per individual (such as panel data). 
 
@@ -665,56 +291,3 @@ Now we can "melt" the data down into long form again.
 d4<-reshape2::melt(d2)
 
 ```
-## Combinining Data
-
-
-If we have achieved data on a compable level, we can combine data sets from different sources. It is just important that we have a connector variable on the individual level. 
-
-The process of combining two data sets is called merging or joining data. 
-
-This example data set contains the twitter accounts of a number of candidates in the 2018 midterm elections. 
-
-
-
-
-
-```{r}
-
-c1<-read.csv("congress1.csv")
-
-names(c1)
-
-```
-
-As we can see it contains a number of variables we also find in the main data set. The reason may be that this data set is actually based on 538's candidate list. 
-
-Let's now combine the data set to check whether electoral success corresponds to Twitter followers. To do so, we need to give merge three arguments: 2 dataframes to merge and at least one variable to merge BY.
-
-```{r}
-
-c2<-merge(c1,frc,by="candidate")
-
-```
-
-As you can see, we now have one data set c2, which has 99k observations. There are only half as many unique candidates in c1 than in frc, so this makes sense. The data set keeps all data points from fcr which it can MATCH.
-
-
-If we specify all.x or all.y , all values are kept, but with NA's for all new variables in all lines that are not matched.
-
-```{r}
-
-c2<-merge(c1,frc,by="candidate",all.y=T)
-
-```
-
-If the variables by which to match do not have the same name, you can either change the name or specify
-
-```{r}
-
-c2<-merge(c1,frc,by.y="candidate",by.x="name",all.y=T)
-
-```
-
-It is very important to make sure the unqiue values are homogeneous and of the same type. Little differences in spelling will lead to a mismatch. The best way is to use not name, but unique id, suchn as a number stored in a string.
-
-The beauty of R is that you can step by step merge as many data sets as you like, aggregate them and reshape them according to your needs. 

@@ -279,10 +279,12 @@ Or a little bit more useful case: let's take the polls as variables into a singl
 ```{r}
 library(lubridate)
 
+
+frc$forecastdate<-as.Date(frc$forecastdate)
 # first we round the date to make it
 frc$week<-round_date(frc$forecastdate,"week")
 
-d2<-reshape2::dcast(frc, candidate ~ week,fun=mean, value.var="voteshare",)
+d2<-reshape2::dcast(frc, candidate ~ week,fun=mean, value.var="voteshare")
 
 ```
 

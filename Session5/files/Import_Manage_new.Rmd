@@ -417,6 +417,8 @@ Now, we have an overview over all data sources regarding the Bundestag. A brief 
 
 ```{r}
 
+data<-f2$data
+
 f2$data$parliament_period
 
 f2$data$politician
@@ -429,10 +431,16 @@ JSON and XML are very closely related in their logic. Let's look at a hyper nest
 list.files()
 
 library(xml2)
+
 r<-read_xml("MDB_STAMMDATEN.XML" )
 r1<-as_list(r)
 
 
+
+r1$DOCUMENT$MDB
+
+
+r1$DOCUMENT[[457]] 
 ```
 
 We transform it into a nested list. You can also use html code directly to speak to the raw xml file if you feel more comfortable!
@@ -454,22 +462,17 @@ mdb1 mdb2 mdb3 mdb4
                                   
 ```{r}
 
-mdb4<-r1$DOCUMENT[[4]]$BIOGRAFISCHE_ANGABEN$GEBURTSDATUM
-
-mdb4$WAHLPERIODEN[[1]]$INSTITUTIONEN[[1]]$INS_LANG
+mdb4<-r1$DOCUMENT[[4]]$NAMEN$NAME
+ 
 
 ```
 
 So you can see, we have infinentely nested data! This is one of the reasons why a strong command of lists is so important. To get the information about each MP, we need to find ways to extract the data we want and need from a large number of complicated list structures. To do so, we need automatization and, to make it ever more clean, functionalizing data.
 
 
-
-
-
 # Automating R
 
 Using R as a statistical package or a calculator is a nice thing. But it gets its real power from programming automatized repetitions. 
-
 
 
 ## Control Flow
@@ -481,15 +484,16 @@ For loops repeat a process following a sequence. We use i or any other index as 
 home<-c("House","Flat","Shelter")
 
 for(i in 1:length(home)){print(home[i])}
+
 ```
 
 
 ```{r}
 r2<-r1$DOCUMENT
-for(i in 1:length(r2)){
-print(r2[[i]]$NAMEN$NAME$NACHNAME[[1]])
-}
 
+for(i in 1:length(r2)){
+print(r2[[i]]$NAMEN$NAME$NACHNAME)
+}
 
 
 ```
@@ -497,6 +501,7 @@ print(r2[[i]]$NAMEN$NAME$NACHNAME[[1]])
 Woah - let's not print this but store it in an object
 
 ```{r}
+
 mdbs<-c()
 for(i in 1:length(r2)){
 mdbs[i]<-r2[[i]]$NAMEN$NAME$NACHNAME[[1]]
@@ -519,12 +524,15 @@ The if statement is made up of a condition (a logical expression that can be tru
 
 ```{r}
 places<-c()
+
 for(i in 1:length(r2)){
-if(length(r2[[i]]$NAMEN$NAME$ORTSZUSATZ)==0){ # if a subscript is out of bounds, it means the index you referred to doesnt exist. The list is shorter than the index. If the list has lenght 0 we instead place an NA in the respective vector position
+if(length(r2[[i]]$NAMEN$NAME$ORTSZUSATZ)==0){ 
 places[[i]]<-NA
 }else
 places[i]<-r2[[i]]$NAMEN$NAME$ORTSZUSATZ[[1]]
 }
+
+
 
 
 ```
@@ -544,9 +552,7 @@ apply
 that all refer to different object types. We will mainly use the lapply loop, because it is the most generic and can handle 99 percent of problems.
 
 ```{r}
-
 mdbs<-lapply(r2,function(x) x$NAMEN$NAME$NACHNAME[[1]])
-
 
 ``` 
 
@@ -583,6 +589,8 @@ places<-unlist(lapply(r2,get_place))
 ### Now you can solve Problem Set 2.2!
 
 After finding out how we can get data into R and how to extract specific elements, we now learn how to organize data structures. 
+
+
 
 
 # Organizing Data in R

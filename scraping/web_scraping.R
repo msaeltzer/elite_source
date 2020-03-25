@@ -1,18 +1,13 @@
 #Web scraping from ballotpedia
 
-install.packages("tidyverse")
 library(tidyverse)
-
-
-install.packages("readxl")
 library(readxl)
 library(stringr)
 
-install.packages('xml2')    
 library(xml2)    
 library(rvest)
 
-setwd("C:/Users/1/Desktop/Work") # set working directory
+setwd("./scraping") # set working directory
 
 my_data <- read_excel("group_1_dataset.xlsx") #load excel data inro R
 df = as.data.frame(my_data) # convert to a data frame
@@ -23,27 +18,43 @@ df[36:46] <- NULL #remove unnecessary variables
 url<- "https://ballotpedia.org/Don_Young_(Alaska)"
 
 #Reading the HTML code from the website
-webpage <- read_html(url)
 
+df$Education<-NA
 
-#Using CSS selectors to scrape the biography section
-biography_data_html <- html_nodes(webpage,'.person')
-
-#Converting biography to text
-biography_data <- html_text(biography_data_html)
-
-head(biography_data)
-
-#Data-Preprocessing: removing \t
-biography_data<-gsub("\t","",biography_data)
-
-#Data-Preprocessing: removing \n
-biography_data<-gsub("\n","",biography_data)
-
-#Data-Preprocessing:  separate education
-education_data<-gsub("University.*", "University",biography_data)
-education_data<-gsub(".*Education", "",education_data)
-
-#Data-Preprocessing:  add spaces
-education_data <-gsub("([a-z])([A-Z])", "\\1 \\2", education_data) #before capital letters
-df$Education<-education_data 
+for(i in 1:nrow(df)){
+  
+  Sys.sleep(6)  
+  
+  webpage <- tryCatch(read_html(df$ballotpedia.org[i]),error=function(e){"e"})
+  if(webpage=="e"){next}
+  
+  
+  #Using CSS selectors to scrape the biography section
+  biography_data_html <- html_nodes(webpage,'.person')
+  
+  #Converting biography to text
+  biography_data <- html_text(biography_data_html)
+  
+  head(biography_data)
+  
+  #Data-Preprocessing: removing \t
+  biography_data<-gsub("\t","",biography_data)
+  
+  #Data-Preprocessing: removing \n
+  biography_data<-gsub("\n","",biography_data)
+  
+  #Data-Preprocessing:  separate education
+  education_data<-gsub("University.*", "University",biography_data)
+  education_data<-gsub(".*Education", "",education_data)
+  
+  #Data-Preprocessing:  add spaces
+  education_data <-gsub("([a-z])([A-Z])", "\\1 \\2", education_data) #before capital letters
+  
+  if(length(education_data)==0){
+    print(i) 
+    print("I found nothing here, please check me")
+    next}
+  
+  
+  df$Education[i]<-education_data 
+}

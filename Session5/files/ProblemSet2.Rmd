@@ -29,7 +29,71 @@ Save it as a new csv file.
     
 ```{r}  
 
-bt1<-read.csv("./btw_kerg/btw2017_kerg.csv")
+# only data
+r1<-read.csv("https://www.bundeswahlleiter.de/dam/jcr/72f186bb-aa56-47d3-b24c-6a46f5de22d0/btw17_kerg.csv",sep = ";",encoding = "UTF-8",skip = 7)
+
+
+# but names are wrong
+
+r0<-read.csv("https://www.bundeswahlleiter.de/dam/jcr/72f186bb-aa56-47d3-b24c-6a46f5de22d0/btw17_kerg.csv",encoding = "UTF-8",skip = 5,sep=";",stringsAsFactors = F)
+
+# The Problem is that the Bundeswahlleiter left a lot of blanks. Removing this requires some work
+
+# let's first turn them into charascters
+line1<-as.character(r0[1,])
+line2<-as.character(r0[2,])
+nline<-as.character(names(r0))
+
+# We see that R automatically gave strange names with Xes
+
+# Let's remove all Words that start with an X and replace by empty characters
+nline<-gsub("X.*","",nline)
+
+# now we have to fill up the "Super" catergories
+# I define a nice function that checks for each element whether it is empty and replaces
+# it with the PREVIOUS value (i-1)
+
+fill_up<-function(x){
+  for(i in 1:length(x)){if(x[i]==""){x[i]<-x[i-1]}}
+  return(x)
+}
+
+nline<-fill_up(nline)
+line1<-fill_up(line1)
+line2<-fill_up(line2)
+
+#just remove the leading NA
+
+line1<-ifelse(line1=="NA","",line1)
+line2<-ifelse(line2=="NA","",line2)
+
+
+names(r1)<-paste0(nline,"_",line1,"_",line2)
+
+
+## Now that we have a nice frame 
+
+# voteshares
+
+
+
+r2<-r1
+zweitstimmen<-r2[,grepl("Zweitstimmen_Endgültig",names(r2))]
+
+# check where voting results are stored
+names(zweitstimmen) # In all but the first 4
+
+
+shares<-c()
+for(i in 5:ncol(zweitstimmen)){
+shares<-cbind(shares,(zweitstimmen[,i]/zweitstimmen[,4])) # divide all votes through proper total votes
+}
+
+shares<-as.data.frame(shares)
+names(shares)<-names(zweitstimmen)[5:ncol(zweitstimmen)]
+
+shares<-cbind(r1[,1:5],shares)
+
 
 
 
@@ -41,13 +105,92 @@ Find out which MP served the longest in Bundestag based on the Stammdaten Databa
 
 ```{r}  
 
+list.files()
 
+library(xml2)
+
+r<-read_xml("MDB_STAMMDATEN.XML" )
+r1<-as_list(r)
 
 ```
 
+```{r}
+
+# first: check how many periods each MP has in his list
+  lapply(r1$DOCUMENT,function(x) length(x$WAHLPERIODEN))
+
+  # then check what is the max value
+
+
+max(unlist(lapply(r1$DOCUMENT,function(x) length(x$WAHLPERIODEN))))
+
+
+# then which MP has this number 
+  who<-which(unlist(lapply(r1$DOCUMENT,function(x) length(x$WAHLPERIODEN)))==
+        max(unlist(lapply(r1$DOCUMENT,function(x) length(x$WAHLPERIODEN)))))
+
+
+  
+  unlist(lapply(r1$DOCUMENT,function(x) x$NAMEN$NAME$VORNAME))[who]
+  unlist(lapply(r1$DOCUMENT,function(x) x$NAMEN$NAME$NACHNAME))[who]
+  
+  
+  
+```
+
+
 
 Find out which candidates exited the parliament early (earlier than other members of the same period).
+NOTE: THIS WAS SUPER COMPLICATED BECAUSE OF IRREGULARITIES IN THE XML. Don't worry if you didn't manage to do this.
 ```{r}  
+
+# First, we need to create a dataframe that contains exits for each period 
+
+r1$DOCUMENT[[1]]<-NULL
+get_times<-function(x){
+p<-as.numeric(unlist(lapply(x$WAHLPERIODEN,function(y) y$WP)))
+# the authors included a null list for not ended yet. we set it to today ;)
+if(19%in%p){x$WAHLPERIODEN[[which(p==19)]]$MDBWP_BIS<-"25.03.2020"}
+
+p1<-seq(1,19) # we make a sequence vector for all of periods
+exit<-unlist(lapply(x$WAHLPERIODEN,function(y) y$MDBWP_BIS))
+# get all the exit dates
+exit<-exit[order(p)] # sometimes wp objects are in the wrong order for some reason
+p<-p[order(p)]
+e1<-rep(NA,19) # create an NA vector of length 19
+e1[which(p1%in%p)]<-exit # and fill in exit dates where they exist
+return(e1)
+}
+
+# the result is a vector that is NA for each period the member is not in parliament 
+# and an exit date if he was.
+
+times<-lapply(r1$DOCUMENT,get_times) # we apply this to all
+
+# transform a list into a data.frame by binding all these vectors to a matrix
+tdf<-do.call(rbind,times)
+tdf<-as.data.frame(tdf) # turn it into a dataframe
+names(tdf)<-seq(1,19)
+
+# now we can turn the strings into dates
+for(i in 1:ncol(tdf)){
+tdf[,i]<-as.Date(tdf[,i],format="%d.%m.%Y")
+}
+
+# and can compute for each time period which MPs stayed till the bitter end (value 0)
+
+diff<-c()
+for(i in 1:ncol(tdf)){
+  diff<-cbind(diff,(tdf[,i]-max(tdf[,i],na.rm = T)))}
+
+
+# all MPs who exited prematurely have a negative rowSum
+
+exited<-rowSums(diff,na.rm=T)
+
+table(exited)
+
+exiteers<-unlist(lapply(r1$DOCUMENT,function(x) x$NAMEN$NAME$NACHNAME))[exited<0]
 
 
 

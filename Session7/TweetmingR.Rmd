@@ -1,0 +1,238 @@
+---
+title: "Session VII"
+author: "Marius Saeltzer"
+date: "29.03.2020"
+output: html_document
+---
+
+```{r}
+#install.packages('knitr')
+```
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+
+This data set is so called panel data with individual*time as the unit of analysis. For each candidate, we have predictions over time. 
+
+```{r}
+
+frc<-read.csv("house_district_forecast.csv")
+
+```
+
+The simplest transformation in R is aggregation or summarization. It moves up the unit of analysis by loosing data. We can therefore take the mean of a time-varying variable.
+In practice, is done using the formula notation: it is special way to write variable relationships in r and is used for regressions, also.
+
+
+```{r}
+                      # this is a tilde!      
+vs<-aggregate(voteshare~candidate,frc,FUN="mean")
+
+```  
+
+We see that the new data set has observations which mirror the number of unique expressions of candidate. It is basically a "summary" data set. We also see that the other variables are gone. This can be solved by adding other variables WHICH VARY ON THE SAME LEVEL OF ANALYSIS.
+
+```{r}
+                      # this is a tilde!      
+vs<-aggregate(voteshare~candidate+party,frc,FUN="mean")
+
+```  
+
+If you take another variable, which changes inside the individual over time, the computer will create an observation for each combination.
+
+The model variable has three levels: classic, lite and deluxe. They produce different results. When we aggregate based on candidate and model, we get the average result per model per candidate.
+
+```{r}
+                      # this is a tilde!      
+vs<-aggregate(voteshare~candidate+model,frc,FUN="mean")
+
+```  
+
+As you can see, we change the level of analysis to "larger" and loose data: all variation in predictions is flattened into a single figure. 
+
+We could also change the level of analysis by changing where the data is stored instead of removing it. The panel format we have in the fcr data set is called a LONG data format in which each time*individual observation is a row. But you can also store the different timepoints as variables and keeping rows for individuals. This is called a WIDE format.
+
+So if you run a simple regression on a long data format, you will run into problems with hierachical data. You can account for this by reshaping the dataset, turning differences in observations in different variables.
+ 
+
+```{r}
+
+library(reshape2)
+
+d1<-reshape2::dcast(frc, candidate ~ model,fun=mean, value.var="voteshare",)
+
+
+```
+
+
+Or a little bit more useful case: let's take the polls as variables into a single data set.
+```{r}
+
+library(lubridate)
+
+frc$forecastdate<-as.Date(frc$forecastdate)
+# first we round the date to make it
+frc$week<-round_date(frc$forecastdate,"week")
+
+d2<-reshape2::dcast(frc, candidate ~ week,fun=mean, value.var="voteshare")
+
+```
+
+Now we can "melt" the data down into long form again.  
+```{r}
+d4<-reshape2::melt(d2)
+
+```
+
+
+# The Twitter API
+
+First, we need an API key. Since they are private property, I will not put them online. 
+To do so, create a twitter account and go to twitter Apps. there, you can apply for a developer's account.
+
+Once you got it, you can create an app, which get you 4 tokens.
+
+You can simply put in the API keys im the arguments provided by the help function for create_token.
+
+I safe my tokens in a dropbox placed csv file. You will not be able to use mine.
+
+```{r}
+# install.packages('rtweet')
+
+if(!require('rtweet')){install.packages('rtweet')}
+
+library(rtweet)
+
+create_token(app='',
+             '',
+             '',
+             '',
+             ''
+             ,access_token = NULL)
+
+rtweet::create_token(app = "presscrape2020",
+"UiAifHyM6xafhqKiKLJd5rJAC",
+"pICpvowgKp8ueSfJZVhrkuwFhsmNQISJfyXUNsJKTiIKw5BwlQ")
+
+
+```
+
+Once we have a twitter ID, we can look up tweets:
+
+
+## Search Tweets
+
+The easiest way is to use twitter like google. It allows you to search the last 18000 tweets containing a keyword.
+
+```{r}
+rt <- search_tweets(
+  "Bundestag", n = 3200, include_rts = FALSE
+)
+
+```
+
+```{r}
+hist(rt$created_at,breaks='hours',main='what you get',xlab='time')
+
+```
+
+
+## User Based Search
+
+You have no idea about the sampling when using the search tweets functions. 
+
+```{r}
+input<-'realdonaldtrump'
+acc<-lookup_users(input)
+
+```
+
+A more stable way to collect data is by downloading timelines of users.
+
+For a single account, you can simply use 
+
+```{r}
+
+g<-get_timeline(input,3000,check=FALSE)
+
+```
+
+## API Restrictions
+
+Twitter places two major restrictions on API usage. First, you can only get the last 3200 tweets. Second, the number of accesses is restricted by a maximum number of calls per minute. 
+
+With a single Key, it takes about 24 hours to get all tweets by the Bundestag. This is ok, but sometimes, we need more data like attributes of all followers. To keep looking after your rate limit is exceeded, you can use an argument of all the twitter functions. For 3200 tweets this doesn't matter, but once you look for a larger number, you might want to do this. 
+
+```{r}
+
+g<-get_timeline(input,3000,retryonratelimit=T)
+
+```
+You can also pass a vector of names to the functions, but be aware that 1) all data gets stored into the same data frame and 2) in longer operations, you might have your computer online for a long while, making the risk of crash and subsequent data loss very real. If you are planning to do your own large scale data operations, I will provide you with code to safely and automatically collect data. But that is higher level programming. 
+
+But for now let's look at some tweets:
+
+```{r}
+
+input<-c("hillaryclinton","BernieSanders","joebiden")
+
+g1<-get_timeline(input,1000,retryonratelimit=T)
+
+g0<-rbind(g,g1)
+
+```
+
+## Level of Analysis
+
+Data storage's most important feature is unit of analysis. Unit of analysis describes the meaning of a line or row in a data set. Unit of analysis could be the individual (in a cross sectional design), but also groups of individuals (party) or multiple observations per individual (such as panel data). 
+
+Our Twitter data set returns time series data: 1000 observations per individual. The users_ _data command returns INDIVIDUAL LEVEL data. We can just add it to the data set. 
+
+```{r}
+
+g0<-cbind(g0,users_data(g0))
+
+```
+
+Transforming data from a more complex file format such as xml to a rectungular form always requires decisions on the level of analysis. Are we interested in individual MPs, MPs in each election period or party aggregates. And if so, how do we store it? This part of the script will deal with these questions. 
+
+
+## Get Networks
+
+Creating networks from twitter data is on the one hand trivial, on the other time consuming. 
+
+Rtweet provides us with two very simple interpretations of the follower relationsship: follwers and friends. As we discussed, friends tell us something about the preferences of the account: your friends decide what kind of input you get on your timeline. Your followers however can be considered your audience. For politicians, these relationships can be interpreted as seeing the followers as potential voters and friends as either news sources or affiliated accounts. You spend attention to add followers to an account and get ready to comment, retweet and reply. 
+
+Let us reuse the account of c_lindner we scraped using the lookup_users function: 
+
+```{r}
+acc$followers_count
+
+acc$friends_count
+```
+
+He has a lot more followers than friends. Let's take a look.
+
+```{r}
+
+f<-get_followers(input,n=1000)
+
+
+## here you can see that you can put in the friends count we got from his account and just put it in the function to get all his friends
+
+f1<-get_friends(input,n=acc$friends_count)
+
+```
+
+As you can see, we only get user IDs. To get more info, we can quickly get the data using lookup users. Now we get a full data set.
+
+```{r}
+
+friends<-lookup_users(f1$user_id)
+
+```
+

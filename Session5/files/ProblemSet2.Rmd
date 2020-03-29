@@ -188,6 +188,10 @@ for(i in 1:ncol(tdf)){
 
 exited<-rowSums(diff,na.rm=T)
 
+
+
+
+
 table(exited)
 
 exiteers<-unlist(lapply(r1$DOCUMENT,function(x) x$NAMEN$NAME$NACHNAME))[exited<0]

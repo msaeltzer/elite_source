@@ -1,5 +1,5 @@
 ---
-title: "Import"
+title: "Merge, Aggregate etc."
 author: "Marius Saeltzer"
 date: "24 Februar 2020"
 output: html_document
@@ -32,10 +32,7 @@ if(!require(rvest)){install.packages("rvest")}
 c1<-read.csv("candidate_summary_2020.csv",stringsAsFactors = F)
 
 c2<-c1[c1$Cand_Party_Affiliation=="DEM"|c1$Cand_Party_Affiliation=="REP",]
-
 c3<-c2[c2$Cand_Office=="H",]
-
-
 ```
 
 Now let's see what's inside! Are these primary candidates? Let us check the run-off structure of an example district.
@@ -67,7 +64,6 @@ d1<-read.xlsx("Dataset Political Elites.xlsx")
 d1<-d1[d1$Election=="House",]
 names(d1)
 
-
 ```
 
 As we can see, there are much more data points in the final campaign finance data set. It seems like the second data set mainly addresses the run-off primary candidates. Let's see whether we can combine them. 
@@ -85,7 +81,6 @@ It is very important to make sure the unqiue values are homogeneous and of the s
 ```{r}
 names1<-strsplit(c3$Cand_Name,",")
 
-names1
 ```
 
 This now returns a list. As we learned from dataset operations before, we can now extract this using lapply.
@@ -95,6 +90,7 @@ This now returns a list. As we learned from dataset operations before, we can no
 c3$lastname<-unlist(lapply(names1,function(x) x[[1]]))
 
 c3$firstname<-unlist(lapply(names1,function(x) ifelse(length(x)==1,NA,x[[2]])))
+
 
 ```
 
@@ -111,9 +107,7 @@ Before we start, the benchmark is the number of rows in d1, as we assume that al
 
 ```{r}
 
-dc<-merge(d1,c3,by="lastname",all.x=T)
-
-
+dc<-merge(d1,c3,by="lastname",all.y=T)
 
 ```
 
@@ -136,8 +130,6 @@ We can also match on multiple variables!
 
 dc<-merge(c3,d1,by=c("lastname","firstname"))
 
-
-
 ```
 
 Wow. 2 Matches. What now? The splitting still included some whitespaces. Let's try again.
@@ -154,7 +146,6 @@ To take a look at the mismatches, we can use the all argument to keep all values
 ```{r}
 dc<-merge(c3,d1,by=c("lastname","firstname"),all.y=T)
 names(dc)
-
 
 ```
 
@@ -182,7 +173,6 @@ d1$Cand_Office_Dist<-as.numeric(d1$Cand_Office_Dist)
 
 dc<-merge(c3,d1,by=c("lastname","Cand_Office_St","Cand_Office_Dist"))
 
-
 ```
 
 Still only 745/1002
@@ -204,7 +194,9 @@ unique(d1$Cand_Office_St)
 unique(d1$Cand_Office_St)[order(unique(d1$Cand_Office_St))]
 unique(c3$Cand_Office_St)[order(unique(c3$Cand_Office_St))]
 
-unique(d1$Cand_Office_St) %in% unique(c3$Cand_Office_St)
+unique(d1$Cand_Office_St)%in%unique(c3$Cand_Office_St)
+
+
 
 
 

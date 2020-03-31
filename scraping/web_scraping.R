@@ -57,4 +57,33 @@ for(i in 1:nrow(df)){
   
   
   df$Education[i]<-education_data 
+   #Data-Preprocessing:  separate profession
+  profession_data<-gsub("Contact.*", "",biography_data)
+  profession_data<-gsub(".*Profession", "", profession_data)
+  
+  #Data-Preprocessing:  add spaces
+  profession_data <-gsub("([a-z])([A-Z])", "\\1 \\2",  profession_data) #before capital letters
+  
+  if(length(profession_data)==0){
+    print(i) 
+    print("I found nothing here, please check me")
+    next}
+  
+  
+  df$Profession[i]<-profession_data 
+  
+  #Data-Preprocessing:  separate religion
+  religion_data<-gsub("Profession.*", "",biography_data)
+  profession_data<-gsub(".*Religion", "", religion_data)
+  
+  #Data-Preprocessing:  add spaces
+  religion_data <-gsub("([a-z])([A-Z])", "\\1 \\2",  religion_data) #before capital letters
+  
+  if(length(profession_data)==0){
+    print(i) 
+    print("I found nothing here, please check me")
+    next}
+  
+  
+  df$Religion[i]<-religion_data 
 }

@@ -1,0 +1,192 @@
+---
+title: "Accessing the Web"
+author: "Marius Saeltzer"
+date: "24 Februar 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+if(!require(tidyverse)){install.packages("tidyverse")}
+if(!require(openxlsx)){install.packages("openxlsx")}
+if(!require(readstata13)){install.packages("readstata13")}
+if(!require(knitr)){install.packages("knitr")}
+if(!require(jsonlite)){install.packages("jsonlite")}
+if(!require(xml2)){install.packages("xml2")}
+if(!require(foreign)){install.packages("foreign")}
+if(!require(rvest)){install.packages("rvest")}
+if(!require(httr)){install.packages("httr")}
+
+```
+
+# Relational Data
+
+One of the main concepts of this course is to collect data from different sources about the same unit of analyis. This leads to complex data structures that can be shifted in combined (Session 6) and reshaped (Session 7) to analyze comprehensively. In this session, we will learn how to use the next stage beyond the data set, the the data base. 
+
+
+Relational data bases contain all the information above and keep them stored in invidual tables that can be combined in a generalized and simple manner. 
+
+To do so, each data set contains a so called key variable. 
+
+One important decision for our data set is to make use of this key concept.
+
+# Web Sources for Data
+
+One major objective of this course is to find data on the internet. As all of you know, we can download particular data sets from homepages, as you would do with the CSES or other surveys. Beyond this, we can access information from the internet directly. Last week we learned to download data from a so called API using a pre-programmed R package. Today, we will enter the world when R does not provide us with ready made tools, but requires us to program our own access. This process is called webscraping, as it allows us to directly ask a server to provide us with particular information. 
+
+Information can be stored in two particular ways: directly reading information from web pages or downloading information the webpage provider wants us to collect. The latter way is of course the easier way and is accessible through so caled Application Programming Interfaces. Today we will focus on the former, while next week, we will focus on scraping homepages directly.
+
+## Application Programming Interfaces
+
+API's are information interfaces for programmers. They are amazing tools, as they allow us to retrieve customized information chunks. In so called REST API's, we send a web based request in form of a customized URL to a server and retrieve an answer. Here you will learn the first step of "web scraping", by manipulating URL's in a particular way.
+
+REST API's are basically servers, meaning computer programs offering services to clients. In this regard, we are the client and ask a web server for information. To do so, we send a REQUEST or QUERY to a server. 
+
+Let's head back for a moment. Sending requests to a server is the most natural thing for our generation. Any time you open a random web page, we send a request to a server. To do so, we enter the server's URL in a browser, which is basically a web client. 
+
+Like in a regular browser request, we need to formulate an URL. A URL is something you all typically work with, but most of you will only use the main URL and then click on links from there. However, most homepage subpages can be accessed by adding a / and the location of the subsite. In some other applications, this is even more flexible. You can "read" the automatically generated URL, for example by a wikipedia search for the term "API"
+
+https://de.wikipedia.org/wiki/API
+
+Now if you change the end into https://de.wikipedia.org/wiki/Hamster
+
+and enter, you will go to a much cuter page. 
+
+This means that you can manipulate the URL for your own advantage.
+
+
+R can do the same thing: it can pass a request to a server, just as a web browser. The problem is just whether the server understands what we want from him. 
+
+The example we will we working with today is the FEC OPEN DATA API. It contains all kind of campaign finance data. Of course, the FEC also provides data as downloadable csv or data bases, but in case of the latter, the data is oftne too large to be read in a regular working directory. Instead, we can access an API and tell the server very specifically what kind of information we want. 
+
+In Twitter, we used the rweet package with ready made functions. These packages are called "wrappers" as they wrap the API requests in another programming language such as Python or R. In other words, it translates the internet language httr which is used to utter GET requests to a server in a form that is more intuitive to users of the language. 
+
+In terms of the FEC, there is a package by Robin Pollack. However it is not an official CRAN package, is difficult to install and in some cases contains errors. So let's build on his code and build our own API
+
+```{r}
+
+main<-read.csv("candidate_summary_2020.csv",stringsAsFactors = F)
+```
+
+As with the Twitter API, it is necessary to authenficate yourself. You can easily gain access by registering your account on https://api.open.fec.gov/developers/
+
+Now let's start with the FEC. Reading the documentation, we know that we can send requests to the API page: 
+
+https://api.open.fec.gov/v1/
+
+By adding the category, the search terms and the API key like this:
+
+https://api.open.fec.gov/v1/candidate/S0SC00255/?api_key=n2u69fqFv4pcf0skAgak18rr6CtI19AIC5kmmMps
+
+When we enter this into our browser, we will access a JSON table that contains all the information about the first candidate. 
+
+
+
+So let's build a simple R wrapper for this, using the paste0 function and the httr package. 
+
+
+
+```{r}
+
+api_key="n2u69fqFv4pcf0skAgak18rr6CtI19AIC5kmmMps"
+
+cand<-main$Cand_Id[1]
+
+url<-paste0("https://api.open.fec.gov/v1/candidate/",cand,"?api_key=",api_key)
+
+
+```
+
+
+Now we just need to send this request to the server using the httr package. These requests are called GET request
+
+```{r}
+
+c1<-GET(url)
+
+```
+Which returns a list we can now read in as a JSON file.
+
+
+```{r}
+
+parsed <- jsonlite::fromJSON(content(resp, "text", encoding="UTF-8"), simplifyVector = FALSE)
+
+
+parsed$results[[1]]
+
+```
+
+In other words, we could write a nice function: a wrapper to get any candidate by ID from the FEC database.
+
+```{r}
+
+get_candidate(cand,api_key){
+  g1<-GET(paste0("https://api.open.fec.gov/v1/candidate/",cand,"?api_key=",api_key))
+return(jsonlite::fromJSON(content(resp, "text", encoding="UTF-8"), simplifyVector = FALSE))
+  }
+
+
+## Example:
+
+#candlist<-list()
+#for(i in 1:nrow(main)){
+#  candlist[[i]]<-get_candidate(main$Cand_Id[i],api_key)
+#}
+
+```
+
+
+Homework: The following code is extracted from the existing API.
+
+It creates a list of all filings for a candidate. 
+
+It contains a tiny flaw that stops it from working. Comment the code, explain what each step does and find the error. 
+
+```{r}
+
+get_filings_for_candidate <- function(candidate_id, api_key, query_params = list()){
+  fec_api(path = paste("/candidate", candidate_id, "filings/", sep="/"), api_key = api_key, query_params = query_params)
+}
+
+fec_api <- function(path, api_key, query_params = list()){
+  url <- modify_url("https://api.open.fec.gov", path = paste("/v1", path, sep="/"), query = c(list(api_key=api_key), query_params))
+  url
+  resp <- GET(url)
+
+# What do you think this chunk does?  
+  
+  if (status_code(resp) != 200) {
+    stop(
+      sprintf(
+        "Open FEC API request failed [%s]\n%s\n<%s>",
+        status_code(resp),
+        resp$response
+      ),
+      call. = FALSE
+    )
+  }
+
+# What do you think this does?
+  if (http_type(resp) != "application/json"){
+    stop("API did not return json", call. = FALSE)
+  }
+
+  parsed <- jsonlite::fromJSON(content(resp, "text", encoding="UTF-8"), simplifyVector = FALSE)
+
+  structure(
+    list(
+      content = parsed,
+      path = path,
+      response = resp
+    ),
+    class = "fec_api"
+  )
+}
+
+cdd<-get_filings_for_candidate(cand,api_key)
+
+```

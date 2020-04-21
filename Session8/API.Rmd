@@ -22,28 +22,15 @@ if(!require(httr)){install.packages("httr")}
 
 ```
 
-# Relational Data
-
-One of the main concepts of this course is to collect data from different sources about the same unit of analyis. This leads to complex data structures that can be shifted in combined (Session 6) and reshaped (Session 7) to analyze comprehensively. In this session, we will learn how to use the next stage beyond the data set, the the data base. 
-
-
-Relational data bases contain all the information above and keep them stored in invidual tables that can be combined in a generalized and simple manner. 
-
-To do so, each data set contains a so called key variable. 
-
-One important decision for our data set is to make use of this key concept.
-
 # Web Sources for Data
 
-One major objective of this course is to find data on the internet. As all of you know, we can download particular data sets from homepages, as you would do with the CSES or other surveys. Beyond this, we can access information from the internet directly. Last week we learned to download data from a so called API using a pre-programmed R package. Today, we will enter the world when R does not provide us with ready made tools, but requires us to program our own access. This process is called webscraping, as it allows us to directly ask a server to provide us with particular information. 
+One major objective of this course is to find data on the internet. As all of you know, we can download particular data sets from homepages, as you would do with the CSES or other surveys. Beyond this, we can access information from the internet directly. Last week we learned to download data from a so called API using a pre-programmed R package. Today, we will enter a world when R does not provide us with ready-made tools, but requires us to program our own access. This process is called webscraping, as it allows us to directly ask a server to provide us with particular information. 
 
-Information can be stored in two particular ways: directly reading information from web pages or downloading information the webpage provider wants us to collect. The latter way is of course the easier way and is accessible through so caled Application Programming Interfaces. Today we will focus on the former, while next week, we will focus on scraping homepages directly.
+Information can be stored in two particular ways: directly reading information from web pages or downloading information the webpage provider wants us to collect. The latter way is of course the easier way and is accessible through so caled Application Programming Interfaces. Today we will focus on the latter, while next week, we will focus on scraping homepages directly.
 
 ## Application Programming Interfaces
 
-API's are information interfaces for programmers. They are amazing tools, as they allow us to retrieve customized information chunks. In so called REST API's, we send a web based request in form of a customized URL to a server and retrieve an answer. Here you will learn the first step of "web scraping", by manipulating URL's in a particular way.
-
-REST API's are basically servers, meaning computer programs offering services to clients. In this regard, we are the client and ask a web server for information. To do so, we send a REQUEST or QUERY to a server. 
+API's are information interfaces for programmers. They are amazing tools, as they allow us to retrieve customized information chunks. In so called REST API's, we send a web based request in form of a customized URL to a server and retrieve an answer. REST API's are basically servers, meaning computer programs offering services to clients. In this regard, we are the client and ask a web server for information. To do so, we send a REQUEST or QUERY to a server. 
 
 Let's head back for a moment. Sending requests to a server is the most natural thing for our generation. Any time you open a random web page, we send a request to a server. To do so, we enter the server's URL in a browser, which is basically a web client. 
 
@@ -57,25 +44,34 @@ and enter, you will go to a much cuter page.
 
 This means that you can manipulate the URL for your own advantage.
 
+R can do the same thing: it can pass a request to a server, just like a web browser. The problem is just whether the server understands what we want from it 
 
-R can do the same thing: it can pass a request to a server, just as a web browser. The problem is just whether the server understands what we want from him. 
+## OPEN FEC
 
-The example we will we working with today is the FEC OPEN DATA API. It contains all kind of campaign finance data. Of course, the FEC also provides data as downloadable csv or data bases, but in case of the latter, the data is oftne too large to be read in a regular working directory. Instead, we can access an API and tell the server very specifically what kind of information we want. 
+The example we will be working with today is the FEC OPEN DATA API. It contains all kind of campaign finance data. Of course, the FEC also provides data as downloadable csv or data bases, but in case of the latter, the data is often too large to be read in a regular working directory. Instead, we can access an API and tell the server very specifically what kind of information we want. 
 
-In Twitter, we used the rweet package with ready made functions. These packages are called "wrappers" as they wrap the API requests in another programming language such as Python or R. In other words, it translates the internet language httr which is used to utter GET requests to a server in a form that is more intuitive to users of the language. 
+In Twitter, we used the rweet package with ready made functions. These packages are called "wrappers" as they wrap the API requests in another programming language such as Python or R. In other words, it translates the internet language http, which is used to utter GET requests to a server, in a form that is more intuitive to users of the language. 
 
-In terms of the FEC, there is a package by Robin Pollack. However it is not an official CRAN package, is difficult to install and in some cases contains errors. So let's build on his code and build our own API
+In terms of the FEC, there is a package by Robin Pollack. However it is not an official CRAN package, is difficult to install and in some cases contains errors. So let's build on his code and build our own API wrapper. 
+
+First, we import the data set we know describes all active candidates:
 
 ```{r}
 
 main<-read.csv("candidate_summary_2020.csv",stringsAsFactors = F)
+
 ```
 
-As with the Twitter API, it is necessary to authenficate yourself. You can easily gain access by registering your account on https://api.open.fec.gov/developers/
+## Authentification
+
+As with the Twitter API, it is necessary to authenficate yourself to a web server. In some cases, data access is restricted, while in other cases the server wants to limit the number of accesses for technical reasons. 
+
+You can easily gain access by registering your account on https://api.open.fec.gov/developers/
 
 Now let's start with the FEC. Reading the documentation, we know that we can send requests to the API page: 
 
 https://api.open.fec.gov/v1/
+
 
 By adding the category, the search terms and the API key like this:
 
@@ -84,14 +80,13 @@ https://api.open.fec.gov/v1/candidate/S0SC00255/?api_key=n2u69fqFv4pcf0skAgak18r
 When we enter this into our browser, we will access a JSON table that contains all the information about the first candidate. 
 
 
-
 So let's build a simple R wrapper for this, using the paste0 function and the httr package. 
 
 
 
 ```{r}
 
-api_key="n2u69fqFv4pcf0skAgak18rr6CtI19AIC5kmmMps"
+api_key="YOURKEYHERE"
 
 cand<-main$Cand_Id[1]
 
@@ -140,17 +135,27 @@ return(jsonlite::fromJSON(content(resp, "text", encoding="UTF-8"), simplifyVecto
 ```
 
 
-Homework: The following code is extracted from the existing API.
+# Problem Set  
 
-It creates a list of all filings for a candidate. 
+
+Task 1 --Reading Code -- 
+
+There is already the stump of a nice wrapper on Git. 
+
+The following functions are extracted from the existing API by Robin Pollock on https://github.com/robinspollak/R.openFEC. 
+
+
+It creates a list of all filings for a candidate,meaning all his donations. 
 
 It contains a tiny flaw that stops it from working. Comment the code, explain what each step does and find the error. 
 
 ```{r}
 
-get_filings_for_candidate <- function(candidate_id, api_key, query_params = list()){
-  fec_api(path = paste("/candidate", candidate_id, "filings/", sep="/"), api_key = api_key, query_params = query_params)
+
+get_candidate_committees_history <- function(candidate_id, api_key, query_params = list()){
+  fec_api(path = paste("/candidate/", candidate_id, "/committees/history/", sep = ""), api_key = api_key, query_params = query_params)
 }
+
 
 fec_api <- function(path, api_key, query_params = list()){
   url <- modify_url("https://api.open.fec.gov", path = paste("/v1", path, sep="/"), query = c(list(api_key=api_key), query_params))
@@ -187,6 +192,40 @@ fec_api <- function(path, api_key, query_params = list()){
   )
 }
 
-cdd<-get_filings_for_candidate(cand,api_key)
+```
+
+Try your code on the candidate Frederica Wilson
+
+```{r}
+
 
 ```
+
+Task 2 -- Writing Code -- 
+
+The data we get here on Wilson is a little unstructured, we want it as a nice data.frame for our database. 
+
+a) Find a way to press this file in a data frame as we did with the Abeordnetenwatch Data.
+
+
+```{r}
+
+```
+
+
+b) Define it as a function
+
+
+```{r}
+
+```
+
+c) Write a loop of some sort to create a dataset for all committees of a given candidate. 
+
+
+```{r}
+
+```
+
+
+ 

@@ -28,7 +28,6 @@ for(i in 1:nrow(df)){
   webpage <- tryCatch(read_html(df$ballotpedia.org[i]),error=function(e){"e"})
   if(webpage=="e"){next}
   
-  
   #Using CSS selectors to scrape the biography section
   biography_data_html <- html_nodes(webpage,'.person')
   

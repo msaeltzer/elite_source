@@ -1,0 +1,261 @@
+---
+title: "WebScraping"
+author: "Marius Sältzer"
+date: "7 4 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+if(!require(tidyverse)){install.packages("tidyverse")}
+if(!require(openxlsx)){install.packages("openxlsx")}
+if(!require(readstata13)){install.packages("readstata13")}
+if(!require(knitr)){install.packages("knitr")}
+if(!require(jsonlite)){install.packages("jsonlite")}
+if(!require(xml2)){install.packages("xml2")}
+if(!require(foreign)){install.packages("foreign")}
+if(!require(rvest)){install.packages("rvest")}
+if(!require(httr)){install.packages("httr")}
+
+```
+
+# Webscraping in R
+
+
+Last week we ecountered the first direct access of web based data through R by calling API's and downloading data directly. But what if data is stored on a homepage in a less structured and easy way, because a) the developers don't want to give a away all their data or b) didn't have the time or imagination to do it yet. 
+
+The answer is to "scrape" data, meaning we read out an "unstructured" page from the Internet. Unstructured means that we have an idea about where the data is, but it is not in a dataset of any source, so we have to crack open the page itself.
+
+Webscraping is a useful ability that is provided by many programming languages. In R, it is best implemented in the rvest package. 
+
+```{r}
+if(!require(rvest)){install.packages("rvest")}
+library(rvest)
+```
+
+The package contains some useful utilities to read webpages into R and process them. 
+
+
+## Html and the Language of the Internet
+
+To access data on a page, we have to look beyond what the Browser shows us, as computers understand all the nice layouts and images a bit differently. 
+ 
+Open the page "https://en.wikipedia.org/wiki/Hamster" in your browser. You see pictures, links, text, boxes and all these nice features. This is how a browser presents us the code used to programm a webpage. 
+
+
+Now click on "inspect" or "Seite untersuchen" in the right click dropdown of your browser (Right click and click the bottom option, this might vary between Browsers, maybe you have to google a bit). Here, you can see the true structure of the homepage, the source code that explains how the browser is supposed to build your page. This way of writing homepages is called html. Html is an easy to learn basic language that allows constructing homepages from scratch, also a very useful skill. 
+
+R is not a browser. It can't visualize a page, but it can help you analyze the underlying code. The package rvest allows us to harvest the internet, providing all nice utilities to make pages maschine readible.
+
+```{r}
+url<-paste0("https://en.wikipedia.org/wiki/","Hamster")
+
+test_html<-xml2::read_xml(url)  
+
+# xml2::html_structure(test_html)
+
+```
+
+Html is a close relative of the XML format we learned, a tree-formed data structure that allows hierarchical data storage. 
+
+Accordingly, we can use XML methods on htmls. The main difference is that while html is a type of XML, it is standardized for web pages. In each of these tree structures the same elements are used all over again, like boxes, text elements, links or tables, following a common syntax.
+
+
+html is always structured using 
+
+<html>  begins something  
+<\html> ends something
+
+
+<body>  begins something  
+<\body> ends something
+
+
+### Blocks 
+
+<div>
+
+<span>
+
+
+#### Text
+
+<h>  begins something  
+<\h> ends something
+
+
+
+<h> headers 
+<p> paragraphs
+
+
+### Lists or Bullet points
+
+<ul> lists 
+
+
+#### Tables 
+
+<table>
+
+For the poupose of data collection, tables are of course a prime target for web scraping in social sciences. 
+
+Rvest contains useful utilities to access tables and turn them into R data.frames.
+
+#### Links 
+
+To go further down a homepage or to download files from servers, it is very useful to store links from homepages. Links are typically stored in href containers.
+
+
+<a> href 
+
+
+## XPATH and CSS
+
+Now you know how to write html code, but how can we find useful information on a homepage. To do this, you can use xml as an adress system, just as we did with the Bundestag XML.
+
+To find these adresses we use so called selectors, which describe the way down from the top element of a homepage to the specific element we are looking for.
+
+You can use either CSS selectors or xpathes. Xpathes are more intuitive to understand in terms of html. It is a structured query language for html. 
+
+To find a specific element in a homepage, you can use two useful tools in the beginning. The inspect function in Chrome or a selector Gadget. Both allow you to hover your mouse over elements of an homepage and show you the respective element in the html file simultaneously. 
+
+After you found the element, you can just right click and copy the xpath.
+
+Most wikipedia articles that belong to certain classes (such as animals) use info boxes, that contain the family of animals it belongs to. Let's try this with our hamster.
+
+Go on wiki, use the selector tool and hover around over the hamster box until the whole box is marked. Click right on the marked up html element and choose copy > copy Xpath.
+
+Paste it in here and apply the xml_nodes function. XML nodes copies an element and all its subelements in a new, smaller XML. We then can analyze it further.
+
+
+```{r}
+boxpath<-'//*[@id="mw-content-text"]/div/table[1]'
+infobox<- xml_nodes(test_html,xpath=boxpath)
+```
+
+We can for example get out all the text now.
+```{r}
+html_text(infobox)
+
+```
+But this looks a bit messy. Looking again at the html, we see that each line in the box is separated as a "tr" element, which is short for table row. 
+
+
+```{r}
+hamstertab<-html_table(infobox)[[1]]
+
+```
+
+Now, we have gotten the text in an okay form. But, we want to get all the links. To understand better how html works, let's look at each individual <tr>. It is made up of of <td>, which are columns, each. And again, some of them are more than just text, they are elements of type <a>, which allows storing a link. 
+
+Let's get all the elements with links out of here.
+
+```{r}
+
+links<-xml_nodes(infobox,"a")
+
+```
+As you can see, there are links stored as hrefs. Hrefs are the attributes that store the link URL.
+
+By looking up the attribute, we now find it easily. This is super useful if you want to crawl subpages for example. Imagine you have a wiki article of a parliament and want to scrape all the linked MPs. 
+
+Let's get all the links and then scrape them too.
+
+```{r}
+search<-html_attr(links,"href")
+```
+### Web Crawling 
+
+Last week we learned how we can manipulate and look through URL's. This is also very useful to find homepages and skip through them.
+```{r}
+
+search<-search[is.na(search)==F]
+s<-list()
+
+for(i in 1:length(search)){
+  
+url<-paste0("https://en.wikipedia.org",search[i])
+
+s[[i]]<-xml2::read_xml(url)  
+}
+
+```
+
+Now, we can apply the same code to all the animals found in here. 
+
+## Limits and Possibilites of Web Scraping
+
+(Almost) Anything can be scraped. Try to reverse engineer a page if you don't know how the
+page works. If you run into databases or java script, you might need to use webdriver like Selenium - but in general, everything is possible
+
+
+#### Legal Issues
+
+
+To be certain it is ok to scrape a page, take a look at the robots.txt
+
+https://www.zdf.de/robots.txt
+
+
+#### Complexity
+ 
+Every page needs its own scraper...
+
+
+
+#### Scraping Etiquette
+
+Don't overload servers! It is rude and might undermine your own efforts.
+
+Use timelags
+
+```{r}
+
+Sys.sleep(3)
+
+```
+
+## Scraping Ballotpedia
+
+
+```{r}
+
+h1<-read_html("https://ballotpedia.org/James_Baird")
+h2<-xml_nodes(h1,xpath='//*[@class="infobox person"]')
+
+box<-html_children(h2) # extract all the elements from the box 
+
+box<-xml_nodes(h2,xpath='//*[contains(@class,"widget-row")]')
+               
+               # extract all the elements from the box 
+
+
+text<-lapply(box,html_text) # get the text out of there
+
+atr<-lapply(box,function(x)html_nodes(x,"p")) # get the text out of there
+
+
+atr<-lapply(box,function(x)html_nodes(x,"div")) # get the text out of 
+x<-atr[[14]]
+lapply(atr,function(x) list(cat=html_text(x[1]),val=html_text(x[2])))
+
+links<-lapply(box,function(x) html_attr(xml_node(x,"a"),"href"))
+twitter<-unlist(links)[grepl("twitter",unlist(links))]
+
+
+```
+
+Task: Write a loop to get all Twitter accounts of all candidates!
+
+Step 1: find a list or a site with all the links to all the candidates. 
+
+
+Step 2: find a way to savely extract the data
+
+Step 3: Write a loop and store it in a dataset!
+
+

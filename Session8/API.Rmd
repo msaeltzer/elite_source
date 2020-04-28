@@ -79,19 +79,17 @@ https://api.open.fec.gov/v1/candidate/S0SC00255/?api_key=n2u69fqFv4pcf0skAgak18r
 
 When we enter this into our browser, we will access a JSON table that contains all the information about the first candidate. 
 
-
 So let's build a simple R wrapper for this, using the paste0 function and the httr package. 
 
 
 
 ```{r}
 
-api_key="YOURKEYHERE"
+api_key="n2u69fqFv4pcf0skAgak18rr6CtI19AIC5kmmMps"
 
-cand<-main$Cand_Id[1]
+cand<-main$Cand_Id[245]
 
 url<-paste0("https://api.open.fec.gov/v1/candidate/",cand,"?api_key=",api_key)
-
 
 ```
 
@@ -100,7 +98,9 @@ Now we just need to send this request to the server using the httr package. Thes
 
 ```{r}
 
-c1<-GET(url)
+resp<-GET(url)
+
+
 
 ```
 Which returns a list we can now read in as a JSON file.
@@ -108,7 +108,7 @@ Which returns a list we can now read in as a JSON file.
 
 ```{r}
 
-parsed <- jsonlite::fromJSON(content(resp, "text", encoding="UTF-8"), simplifyVector = FALSE)
+parsed <- jsonlite::fromJSON(content(c1, "text", encoding="UTF-8"), simplifyVector = FALSE)
 
 
 parsed$results[[1]]
@@ -119,10 +119,11 @@ In other words, we could write a nice function: a wrapper to get any candidate b
 
 ```{r}
 
-get_candidate(cand,api_key){
-  g1<-GET(paste0("https://api.open.fec.gov/v1/candidate/",cand,"?api_key=",api_key))
-return(jsonlite::fromJSON(content(resp, "text", encoding="UTF-8"), simplifyVector = FALSE))
-  }
+get_candidate<-function(cand,api_key){
+g1<-GET(paste0("https://api.open.fec.gov/v1/candidate/",cand,"?api_key=",api_key))
+return(jsonlite::fromJSON(content(g1, "text", encoding="UTF-8"), simplifyVector = FALSE))
+}
+
 
 
 ## Example:
@@ -151,11 +152,15 @@ It contains a tiny flaw that stops it from working. Comment the code, explain wh
 
 ```{r}
 
+get_candidate_committees_history(main$Cand_Id[1],api_key)
+
+
+candidate_id<-main$Cand_Id[1]
+
 
 get_candidate_committees_history <- function(candidate_id, api_key, query_params = list()){
-  fec_api(path = paste("/candidate/", candidate_id, "/committees/history/", sep = ""), api_key = api_key, query_params = query_params)
+  fec_api(path = paste("candidate/", candidate_id, "/committees/history/", sep = ""), api_key = api_key, query_params = query_params)
 }
-
 
 fec_api <- function(path, api_key, query_params = list()){
   url <- modify_url("https://api.open.fec.gov", path = paste("/v1", path, sep="/"), query = c(list(api_key=api_key), query_params))
@@ -220,7 +225,7 @@ b) Define it as a function
 
 ```
 
-c) Write a loop of some sort to create a dataset for all committees of a given candidate. 
+c) Write a loop of some sort to create a dataset for all candidates of a given candidate. 
 
 
 ```{r}
@@ -229,3 +234,29 @@ c) Write a loop of some sort to create a dataset for all committees of a given c
 
 
  
+### Follow the money API
+
+```{r}
+key<-"2862552ef44a7c15c5fd8a8d19c42d24"
+request<-"dt=2&is-s=LA&is-y=2016&"
+paste0('https://api.followthemoney.org/?',
+request,
+'APIKey=',key,',&mode=json')
+
+```
+ 
+## state and year
+
+is: independent spending 
+
+is-s=
+  
+is-y=
+  
+## individual information  
+gro
+  is-d-id #donor
+  is-s-id #spender
+  is-t-id #target 
+
+lby: lobbying 

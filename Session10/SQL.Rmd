@@ -1,0 +1,22 @@
+---
+title: "Relational Datasets and SQL"
+author: "Marius Sältzer"
+date: "6 4 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Relational Data
+
+One of the main concepts of this course is to collect data from different sources about the same unit of analyis. This leads to complex data structures that can be shifted in combined (Session 6) and reshaped (Session 7) to analyze comprehensively. In this session, we will learn how to use the next stage beyond the data set, the the data base. 
+
+
+Relational data bases contain all the information above and keep them stored in invidual tables that can be combined in a generalized and simple manner. 
+
+To do so, each data set contains a so called key variable. 
+
+One important decision for our data set is to make use of this key concept.

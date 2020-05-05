@@ -9,14 +9,305 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-
 # Relational Data
 
 One of the main concepts of this course is to collect data from different sources about the same unit of analyis. This leads to complex data structures that can be shifted in combined (Session 6) and reshaped (Session 7) to analyze comprehensively. In this session, we will learn how to use the next stage beyond the data set, the the data base. 
-
 
 Relational data bases contain all the information above and keep them stored in invidual tables that can be combined in a generalized and simple manner. 
 
 To do so, each data set contains a so called key variable. 
 
 One important decision for our data set is to make use of this key concept.
+
+## Our data
+
+In this course, we collect numerous sources of data on a common subject, candidates for congress and presidency. To store this information, we will now put the collected data in a common database. First, we will import it.
+
+
+```{r}
+exp<-read.csv("exp_pres.csv")
+
+library(rtweet)
+
+load("JonesDougTimeline.rda")
+accounts<-users_data(JonesDougTimeline)
+
+main<-read.csv("Dataset Political Elites.csv",stringsAsFactors = F)
+candidates<-read.csv("candidate_summary_2020.csv",stringsAsFactors = F)
+
+```
+
+
+You already collected some data from all these different data sources. We now can combine them and make them relational. Before, we will have to deal with some unit of analysis problems. 
+
+Campaign finance data set includes a) individuals but b) individual data for a specific period in time, namely the 2020 data. There could be a lot of information on other periods, making this time dependent. We therefore need a dataset for each election and a general data set that works at all times.
+
+```{r}
+
+# Id combined with links and names
+per_fec<-candidates[,1:3]
+
+# we only need the id here 
+fec2020<-candidates[,3:ncol(candidates)]
+
+```
+ 
+In the main dataset, we have a lot of information stored on the individual level and already connected the data with district level data. However, we can store the 2020 district information independently, to avoid redundancies. 
+ 
+```{r}
+districts<-main[,17:27]
+
+personal<-main[,1:16]
+
+names(personal)
+```
+
+But, as we see, there is also some information that is election dependent
+
+```{r}
+election<-personal[,c(4,5,6)]
+
+
+```
+
+In the timelines dataset, we have all information on the twitter behavior of the candidate, but also the individual level information user user_data()
+
+
+```{r}
+account<-users_data(JonesDougTimeline)
+```
+
+As we can see, we now have three data sets that contain individual level information about candidates, but we have different numbers of observations (4149,1170,1), so 
+merging them into one data set would create a large number of NA's. 
+
+We therefore create 3 individual level tables that can be connected.
+
+Our population are all candidates in the 
+  
+  Presidential
+  House
+  Senate
+
+Elections
+  
+We define a candidate not as having filed a report with the FEC, since that is only requiered after having raised more than 5,000 $.
+
+Instead, we look at all (primary) candidates on ballotpedia. 
+
+After basing all candidates here, we can create KEY. 
+
+Let's first create a unique key to start with. 
+
+
+ID's should be unique but have the same total length, and also should be identifiable as IDs. Therefore we create a running Value of the Form 
+
+  CAND000001
+  
+to potentially store 999.999 candidates. They will always be characters of length 10, so we can extract numbers automatically if necessary.
+
+```{r}
+
+library(stringr)
+                              
+personal$ID<-paste0("CAND",str_pad(seq(1,nrow(personal)), 6, pad = "0"))
+
+```
+
+
+Now, we want to add this ID to the candidates dataset. To do so, we need to merge the candidates set, as we did in Session 6 of this course. 
+
+As the name-combination is not unique and differs between sources, we need to combine on the district-lastname combination. 
+
+```{r}
+
+personal$District<-as.character(personal$District)
+  
+  splits<-strsplit(personal$District,"-")
+  state<-sapply(splits,"[[",1)
+  number<-sapply(splits,"[[",2)
+    number<-ifelse(number=="00 (S)","00",number)
+    number<-ifelse(number=="AL","00",number)
+
+  personal$Cand_Office_St<-state
+
+  personal$number_str<-number
+
+  number<-as.numeric(number)
+  
+  personal$Cand_Office_Dist<-number
+
+personal$Cand_Office<-ifelse(personal$Election=="House","H","S")
+```
+
+On the other side, we need to manipulate the name variable of the candidates data. 
+
+```{r}
+
+names1<-strsplit(candidates$Cand_Name,",")
+  candidates$lastname<-unlist(lapply(names1,function(x) x[[1]]))
+  candidates$firstname<-unlist(lapply(names1,function(x)  
+    
+  ifelse(length(x)==1,NA,x[[2]])))
+    
+  personal$lastname<-toupper(personal$Name)
+  personal$firstname<-toupper(personal$First.Name)
+
+
+```
+
+We add the id Variable to all thoses rows of the candidates dataset that are also in the main dataset
+
+```{r}
+candidates<-merge(p1,candidates,by=c("lastname","Cand_Office_Dist","Cand_Office_St"),all.y=T)
+```
+
+## Building an SQL Database
+
+Most of the worlds data is stored in databases and most of these databases are built in a language called SQL (Structured Query Language).
+
+```{r}
+if(!require("RSQLite")){install.packages("RSQLite")}
+if(!require("dbplyr")){install.packages("dbplyr")}
+```
+
+
+First, we create a database. It will pop up in your working directory as a file. If it exists already, we OPEN the database as a connection. Therefore, changes in the database will immediately impact the db file as found in your folder. Adding data will make it grow.
+
+```{r}
+
+us <- dbConnect(RSQLite::SQLite(), "us_elections.sqlite")
+```
+
+
+
+## Adding Tables to a SQL data base
+
+
+Imagine this as a clone now. We can data in and out 
+
+```{r}
+
+dbWriteTable(us, "candidates",personal,overwrite=T)
+
+# Check what we have now 
+dbListTables(us)
+
+```
+
+## The SQL Language
+
+
+FROM == [] or $ # describes an object
+AS   == aliasing (change the names inside a query to make it shorter i.e)
+
+
+SELECT == r[,i] # selects columns
+WHERE == r[i,]  # Selects rows based on logic
+
+DISTINCT == unique() # reduces to unique values
+ORDER BY == order() # sorts data
+LIKE == grepl()  # search by regular expression 
+GROUP BY 
+
+JOIN == merge # combines data sets
+  INNER # only matches 
+  OUTER ## all=T
+  LEFT ## all.x=T
+  RIGHT ## all.y=T
+
+ON == BY 
+
+You can pass any SQL command using the dbExecute function!
+or create an empty table
+
+```{r}
+dbExecute(us, 'CREATE TABLE test_table(id int, name text)')
+
+```
+
+and Kill it...
+```{r}
+dbExecute(us, 'DROP TABLE test_table')
+
+
+```
+
+## Accessing data
+
+Now, we can use SQL to query our data 
+
+Structure of a request: 
+    COMMAND *
+    FROM the_table_you_want; 
+    
+    
+```{r}
+
+
+dbGetQuery(us, ' 
+           SELECT "First.Name" 
+           FROM candidates;                 
+                              ')              
+
+```
+```{r}
+dbGetQuery(us, ' 
+           SELECT "First.Name","Name" 
+           FROM candidates;                 
+                              ')              
+```
+
+
+```{r}
+
+dbGetQuery(us, ' 
+           SELECT "First.Name","Name" 
+           FROM candidates                 
+           WHERE "Party"=="Rep";                 
+                              ')              
+```
+
+As you can see, this is quite intuitive and can be used to custom tailor your access just as in R itself.
+
+
+Of course, you can just extract the whole table into a dataframe again using 
+```{r}
+
+df2<-dbGetQuery(us, ' 
+           SELECT *
+           FROM candidates;')                
+
+```
+and do the data operations in R.
+
+Now, after we practiced a bit, we can add our data in the same data base
+```{r}
+
+us <- dbConnect(RSQLite::SQLite(), "election_main.sqlite")
+
+dbListTables(us)
+
+## define the core database 
+dbWriteTable(us, "twitteraccounts",account)
+dbWriteTable(us, "campaignfinance",candidates)
+dbListTables(us)
+
+
+#Say bye bye and close the connection
+
+
+dbDisconnect(us)
+
+```
+
+
+## Relational Data bases 
+
+We now have introduced a series of query tools, but in spite of them being stored together they have little advantage over storing data in a list of list or an XML. The real power of SQL becomes obvious when using so called keys and making a database relational. 
+
+Next week, we will combine this data using keys, do create datasets from scratch for your RQ's! 
+
+
+
+
+

@@ -9,9 +9,7 @@ library(rvest)
 
 setwd("./scraping") # set working directory
 
-my_data <- read_excel("group_1_dataset.xlsx") #load excel data inro R
-
-my_data <- read.csv("group_1_dataset.csv",stringsAsFactors = F) #load excel data inro R
+my_data <- read.csv("group_1_dataset_merged.csv",stringsAsFactors = F) #load excel data inro R
 
 df = as.data.frame(my_data) # convert to a data frame
 

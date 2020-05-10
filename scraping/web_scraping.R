@@ -107,9 +107,9 @@ for(i in 1:nrow(df)){
   links<-lapply(box,function(x) html_attr(xml_node(x,"a"),"href"))
   twitter<-unlist(links)[grepl("twitter",unlist(links))]
   if(length(twitter)>1){
-  df$Twitter1[i]<-twitter[1]
-  df$Twitter2[i]<-twitter[2]
-  }else{df$Twitter1[i]<-twitter[1]}
+  df$twitter1[i]<-twitter[1]
+  df$twitter2[i]<-twitter[2]
+  }else{df$twitter1[i]<-twitter[1]}
   
   
   }

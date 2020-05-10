@@ -9,17 +9,13 @@ library(rvest)
 
 setwd("./scraping") # set working directory
 
-my_data <- read.csv("group_1_dataset_merged.csv",stringsAsFactors = F) #load excel data inro R
+my_data <- read.csv("group_1_dataset_merged.csv",stringsAsFactors = F) #load data 
 
 df = as.data.frame(my_data) # convert to a data frame
 
 
 
 #df[36:46] <- NULL #remove unnecessary variables if working with full version
-#recode(df$ballotpedia.org[1]=="https://ballotpedia.org/Don_Young_(Alaska)")
-#url <- df$ballotpedia.org
-url<- "https://ballotpedia.org/Don_Young_(Alaska)"
-
 #Reading the HTML code from the website
 
 df$Education<-NA

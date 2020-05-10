@@ -85,4 +85,21 @@ for(i in 1:nrow(df)){
   
   
   df$Religion[i]<-religion_data 
+  
+  #Extract Twitter links
+  h2<-xml_nodes(webpage,xpath='//*[@class="infobox person"]')
+  box<-html_children(h2) # extract all the elements from the box 
+  box<-xml_nodes(h2,xpath='//*[contains(@class,"widget-row")]')
+  
+  # extract all the elements from the box 
+  text<-lapply(box,html_text) 
+  atr<-lapply(box,function(x)html_nodes(x,"p")) 
+  atr<-lapply(box,function(x)html_nodes(x,"div")) 
+  x<-atr[[14]]
+  
+  lapply(atr,function(x) list(cat=html_text(x[1]),val=html_text(x[2])))
+  links<-lapply(box,function(x) html_attr(xml_node(x,"a"),"href"))
+  twitter<-unlist(links)[grepl("twitter",unlist(links))]
+
+  df$Twitter[i]<-twitter
 }

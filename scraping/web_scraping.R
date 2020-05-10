@@ -15,7 +15,7 @@ df = as.data.frame(my_data) # convert to a data frame
 
 
 
-df[36:46] <- NULL #remove unnecessary variables
+#df[36:46] <- NULL #remove unnecessary variables if working with full version
 #recode(df$ballotpedia.org[1]=="https://ballotpedia.org/Don_Young_(Alaska)")
 #url <- df$ballotpedia.org
 url<- "https://ballotpedia.org/Don_Young_(Alaska)"

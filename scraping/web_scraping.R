@@ -18,83 +18,79 @@ df = as.data.frame(my_data) # convert to a data frame
 #df[36:46] <- NULL #remove unnecessary variables if working with full version
 #Reading the HTML code from the website
 
-df$Education<-NA
-df$twitter1<-NA
-df$twitter2<-NA
+
+dir.create("profile_pages")
+
+list.files()
+
+datnames<-c("Base salary","Net worth","Last elected","Next election","Associate","Bachelor's"      
+   ,"Service / branch","Years of service","Religion","Profession" )
 
 
+dat<-matrix(nrow=nrow(df),ncol=length(datnames))
+dat.frame<-as.data.frame(dat)
 
-i<-212
-
-# KAtie, not Ketie Porter
-
-df[i,]
+names(dat.frame)<-datnames
 
 for(i in 1:nrow(df)){
-  
   Sys.sleep(2)  
   
   webpage <- tryCatch(read_html(df$ballotpedia.org[i]),error=function(e){"e"})
   if(webpage=="e"){next}
   
+  pagename<-paste0("./profile_pages/",df$First.Name[i],"_",df$Name[i],".txt")
+  wbpge<-as.character(webpage)
+  writeLines(wbpge,con=pagename)
+
   #Using CSS selectors to scrape the biography section
-  biography_data_html <- html_nodes(webpage,'.person')
-  
-  #Converting biography to text
-  biography_data <- html_text(biography_data_html)
-  
-  #Data-Preprocessing: removing \t
-  biography_data<-gsub("\t","",biography_data)
-  
-  #Data-Preprocessing: removing \n
-  biography_data<-gsub("\n","",biography_data)
-  
-  #Data-Preprocessing:  separate education
-  education_data<-gsub("University.*", "University",biography_data)
-  education_data<-gsub(".*Education", "",education_data)
-  
-  #Data-Preprocessing:  add spaces
-  education_data <-gsub("([a-z])([A-Z])", "\\1 \\2", education_data) #before capital letters
-  
-  if(length(education_data)==0){
-    print(i) 
-    print("I found nothing here, please check me")
-    next}
+
+  content<-xml_nodes(webpage,xpath='//*[@id="mw-content-text"]')
   
   
-  df$Education[i]<-education_data 
-   #Data-Preprocessing:  separate profession
-  profession_data<-gsub("Contact.*", "",biography_data)
-  profession_data<-gsub(".*Profession", "", profession_data)
+  ## Content paragraph
+  par1<-xml_nodes(webpage,xpath='//*[@id="mw-content-text"]/p[2]')
+  df$content[i]<-html_text(par1)
   
-  #Data-Preprocessing:  add spaces
-  profession_data <-gsub("([a-z])([A-Z])", "\\1 \\2",  profession_data) #before capital letters
+  par1<-xml_nodes(webpage,xpath='//*[@id="mw-content-text"]/p[2]/a')
+  df$District_link[i]<-links[grepl("District",links)][1]
+    
+  ## Content Box 
   
-  if(length(profession_data)==0){
-    print(i) 
-    print("I found nothing here, please check me")
-    next}
-  
-  
-  df$Profession[i]<-profession_data 
-  
-  #Data-Preprocessing:  separate religion
-  religion_data<-gsub("Profession.*", "",biography_data)
-  profession_data<-gsub(".*Religion", "", religion_data)
-  
-  #Data-Preprocessing:  add spaces
-  religion_data <-gsub("([a-z])([A-Z])", "\\1 \\2",  religion_data) #before capital letters
-  
-  if(length(profession_data)==0){
-    print(i) 
-    print("I found nothing here, please check me")
-    next}
-  
-  
-  df$Religion[i]<-religion_data 
-  
-  #Extract Twitter links
   h2<-xml_nodes(webpage,xpath='//*[@class="infobox person"]')
+    
+  #children
+  #silblings 
+  
+ #   
+  keys<-xml_children(h2)
+  key<-lapply(keys,xml_children)
+  
+  data<-lapply(key,html_text)
+  data<-data[lapply(data,length)>1]
+  
+  key<-c()
+  value<-c()
+  
+  for(i in 1:length(data)){
+  if(length(data[[i]])>1){
+    key[i]<-data[[i]][1]
+    value[i]<-data[[i]][2]
+  }else{key[i]<-data[[i]]
+  value[i]<-NA}     
+  }
+  
+  value<-gsub("\\n","",value)
+  value<-gsub("\\t","",value)
+  
+  key<-gsub("\\n","",key)
+  key<-gsub("\\t","",key)
+  
+  for(j in 1:length(names(dat.frame))){
+  if(names(dat.frame)[j]%in%key){dat.frame[i,j]<-as.character(value[which(key%in%names(dat.frame)[j])])}
+  }
+
+  
+    #Extract Twitter links
   box<-html_children(h2) # extract all the elements from the box 
   box<-xml_nodes(h2,xpath='//*[contains(@class,"widget-row")]')
   
@@ -107,9 +103,7 @@ for(i in 1:nrow(df)){
   links<-lapply(box,function(x) html_attr(xml_node(x,"a"),"href"))
   twitter<-unlist(links)[grepl("twitter",unlist(links))]
   if(length(twitter)>1){
-  df$twitter1[i]<-twitter[1]
-  df$twitter2[i]<-twitter[2]
+    df$twitter1[i]<-twitter[1]
+    df$twitter2[i]<-twitter[2]
   }else{df$twitter1[i]<-twitter[1]}
-  
-  
-  }
+}

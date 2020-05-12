@@ -32,8 +32,13 @@ dat.frame<-as.data.frame(dat)
 
 names(dat.frame)<-datnames
 
-for(i in 1:nrow(df)){
+df$twitter1<-NA
+df$twitter2<-NA
+
+for(i in 11:nrow(df)){
   Sys.sleep(2)  
+  
+  print(i)
   
   webpage <- tryCatch(read_html(df$ballotpedia.org[i]),error=function(e){"e"})
   if(webpage=="e"){next}
@@ -71,12 +76,12 @@ for(i in 1:nrow(df)){
   key<-c()
   value<-c()
   
-  for(i in 1:length(data)){
-  if(length(data[[i]])>1){
-    key[i]<-data[[i]][1]
-    value[i]<-data[[i]][2]
-  }else{key[i]<-data[[i]]
-  value[i]<-NA}     
+  for(k in 1:length(data)){
+  if(length(data[[k]])>1){
+    key[k]<-data[[k]][1]
+    value[k]<-data[[k]][2]
+  }else{key[k]<-data[[k]]
+  value[k]<-NA}     
   }
   
   value<-gsub("\\n","",value)
@@ -94,13 +99,8 @@ for(i in 1:nrow(df)){
   box<-html_children(h2) # extract all the elements from the box 
   box<-xml_nodes(h2,xpath='//*[contains(@class,"widget-row")]')
   
-  # extract all the elements from the box 
-  text<-lapply(box,html_text) 
-  atr<-lapply(box,function(x)html_nodes(x,"p")) 
-  atr<-lapply(box,function(x)html_nodes(x,"div")) 
-  
-  lapply(atr,function(x) list(cat=html_text(x[1]),val=html_text(x[2])))
   links<-lapply(box,function(x) html_attr(xml_node(x,"a"),"href"))
+  
   twitter<-unlist(links)[grepl("twitter",unlist(links))]
   if(length(twitter)>1){
     df$twitter1[i]<-twitter[1]

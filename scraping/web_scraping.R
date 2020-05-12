@@ -35,7 +35,7 @@ names(dat.frame)<-datnames
 df$twitter1<-NA
 df$twitter2<-NA
 
-for(i in 11:nrow(df)){
+for(i in 51:nrow(df)){
   Sys.sleep(2)  
   
   print(i)
@@ -54,14 +54,28 @@ for(i in 11:nrow(df)){
   
   ## Content paragraph
   par1<-xml_nodes(webpage,xpath='//*[@id="mw-content-text"]/p[2]')
+  if(length(par1)>0){
   df$content[i]<-html_text(par1)
-  
   par1<-xml_nodes(webpage,xpath='//*[@id="mw-content-text"]/p[2]/a')
   df$District_link[i]<-links[grepl("District",links)][1]
-    
+  }
+  
   ## Content Box 
   
   h2<-xml_nodes(webpage,xpath='//*[@class="infobox person"]')
+  
+  
+  #Extract Twitter links
+  box<-html_children(h2) # extract all the elements from the box 
+  box<-xml_nodes(h2,xpath='//*[contains(@class,"widget-row")]')
+  
+  links<-lapply(box,function(x) html_attr(xml_node(x,"a"),"href"))
+  
+  twitter<-unlist(links)[grepl("twitter",unlist(links))]
+  if(length(twitter)>1){
+    df$twitter1[i]<-twitter[1]
+    df$twitter2[i]<-twitter[2]
+  }else{df$twitter1[i]<-twitter[1]}
     
   #children
   #silblings 
@@ -73,15 +87,19 @@ for(i in 11:nrow(df)){
   data<-lapply(key,html_text)
   data<-data[lapply(data,length)>1]
   
+  if(length(data)<1){print("no table found")
+    next}
+  
   key<-c()
   value<-c()
-  
+
   for(k in 1:length(data)){
-  if(length(data[[k]])>1){
+  
+    if(length(data[[k]])>1){
     key[k]<-data[[k]][1]
     value[k]<-data[[k]][2]
   }else{key[k]<-data[[k]]
-  value[k]<-NA}     
+  value[k]<-NA}
   }
   
   value<-gsub("\\n","",value)
@@ -95,15 +113,7 @@ for(i in 11:nrow(df)){
   }
 
   
-    #Extract Twitter links
-  box<-html_children(h2) # extract all the elements from the box 
-  box<-xml_nodes(h2,xpath='//*[contains(@class,"widget-row")]')
-  
-  links<-lapply(box,function(x) html_attr(xml_node(x,"a"),"href"))
-  
-  twitter<-unlist(links)[grepl("twitter",unlist(links))]
-  if(length(twitter)>1){
-    df$twitter1[i]<-twitter[1]
-    df$twitter2[i]<-twitter[2]
-  }else{df$twitter1[i]<-twitter[1]}
 }
+
+
+df$ballotpedia.org[42]

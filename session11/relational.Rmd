@@ -1,0 +1,183 @@
+---
+title: "Relational Databases II"
+author: "Marius Sältzer"
+date: "6 4 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## About the Term Paper
+
+
+Two Types:
+  
+  Databased Term Paper
+  
+    Focus on OUR data
+    Own Question
+    Lit Review
+    Hypotheses
+    Idea of Testing
+  
+  
+  Data Paper
+
+    Describe research idea (for BA-thesis f.e.)
+    Collect your OWN data
+    Build codebook
+    Describe the data 
+  
+
+  Hybrid
+    
+    Describe a question that is not answerable with ALL our data, but relates  
+    Collect extra data that is connected to OUR data  
+    Add codebook and describe
+    Could be a team effort, also! One substantive paper based on the new data someone else collected
+    
+    
+## Building an SQL Database
+
+Most of the worlds data is stored in databases and most of these databases are built in a language called SQL (Structured Query Language).
+
+```{r}
+if(!require("RSQLite")){install.packages("RSQLite")}
+if(!require("dbplyr")){install.packages("dbplyr")}
+```
+
+
+First, we create a database. It will pop up in your working directory as a file. If it exists already, we OPEN the database as a connection. Therefore, changes in the database will immediately impact the db file as found in your folder. Adding data will make it grow.
+
+
+## Relational Data bases 
+
+We now have introduced a series of query tools, but in spite of them being stored together they have little advantage over storing data in a list of list or an XML. The real power of SQL becomes obvious when using so called keys and making a database relational. 
+
+Next week, we will combine this data using keys, do create datasets from scratch for your RQ's! 
+
+
+```{r}
+
+us <- dbConnect(RSQLite::SQLite(), "twitter2.sqlite")
+
+```
+
+
+### Adding Twitter data 
+
+Some politicians have several twitter accounts, which means we can't use the individual key of Twitter, as we connect them to an individual candidate from 0 to 2 times. We therefore add a foreign key to the twitter data which uniquely identifies the candidate. 
+
+```{r}
+
+load("accounts.rdata")
+
+load("tweets.Rdata")
+
+
+dbCreateTable(us,"twitteraccounts",accounts,overwrite=T)
+dbCreateTable(us,"tweets",all,overwrite=T)
+
+dbListTables(us)
+```
+
+
+### Creating Constraints
+
+Up until now, we created tables by importing it directly from R. However, with relational databases, we can give the columns specific meanings inside the data structure, as keys or constraints. They allow us to exactly control what happens in a dataset. 
+
+To do so, we need to create tables with contraints
+
+```{r}
+dbExecute(us,"DROP TABLE twaccounts;")
+
+dbExecute(us,"CREATE TABLE twaccounts(
+tweet_id INTEGER,
+user_id INTEGER,
+screen_name TEXT,
+name TEXT);")
+
+```
+
+
+### Primary Keys
+
+More importantly, it allows us to create 
+
+
+```{r}
+
+dbExecute(us,"DROP TABLE twaccounts;")
+
+dbExecute(us,"CREATE TABLE twaccounts(
+user_id INTEGER,
+screen_name TEXT,
+name TEXT);")
+
+```
+
+Task 1: Choose the important variables of your group's data set and create an empty table in your copy of the database. 
+
+Send me the code.
+
+
+## Inserting data
+
+Now, as we have created the empty data sets, we can fill them with the data at hand. We can therefore migrate data from the large, unconstrained table in the more limited, structured table.
+
+```{r}
+### Import your data into the table
+
+
+dbGetQuery(us, "
+SELECT user_id
+FROM twitteraccounts;")
+
+```
+
+
+```{r}
+
+dbExecute(us,"INSERT INTO twaccounts
+SELECT user_id ,screen_name ,name
+FROM twitteraccounts;")
+
+dbGetQuery(us, " 
+           SELECT user_id , screen_name , name
+           FROM twaccounts;")                
+
+dbExecute(us,"DROP TABLE twitteraccounts;")
+
+```
+
+
+```{r}
+
+dbExecute(us,"DROP TABLE twittertext;")
+
+dbExecute(us,"CREATE TABLE twittertext(
+status_id INTERGER PRIMARY KEY,
+user_id INTEGER,
+screen_name TEXT,
+text TEXT);")
+
+
+
+dbExecute(us,"INSERT INTO twittertext
+SELECT status_id, user_id ,screen_name , text 
+FROM tweets;")
+
+
+
+dbGetQuery(us, " 
+           SELECT status_id, user_id ,screen_name , text
+           FROM twittertext;")                
+
+
+```
+
+
+
+``{r}

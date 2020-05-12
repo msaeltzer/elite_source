@@ -9,7 +9,7 @@ library(rvest)
 
 setwd("./scraping") # set working directory
 
-my_data <- read.csv("group_1_dataset_merged.csv",stringsAsFactors = F) #load data 
+my_data <- read.csv("group_1_dataset_merged.csv",stringsAsFactors = F,sep="\t") #load data 
 
 df = as.data.frame(my_data) # convert to a data frame
 
@@ -30,13 +30,15 @@ datnames<-c("Base salary","Net worth","Last elected","Next election","Associate"
 dat<-matrix(nrow=nrow(df),ncol=length(datnames))
 dat.frame<-as.data.frame(dat)
 
+
 names(dat.frame)<-datnames
 
 df$twitter1<-NA
 df$twitter2<-NA
 
+
+
 for(i in 1:nrow(df)){
-  Sys.sleep(2)  
   
   rm(twitter)
   rm(h2)
@@ -49,19 +51,19 @@ for(i in 1:nrow(df)){
   rm(value)
   
   
-  print(i)
-  
-  
-  webpage <- tryCatch(read_html(df$ballotpedia.org[i]),error=function(e){"e"})
-  if(webpage=="e"){next}
+    print(i)
+  #webpage <- tryCatch(read_html(df$ballotpedia.org[i]),error=function(e){"e"})
+  #if(webpage=="e"){next}
   
   pagename<-paste0("./profile_pages/",df$First.Name[i],"_",df$Name[i],".txt")
-  wbpge<-as.character(webpage)
-  writeLines(wbpge,con=pagename)
+  
+  webpage <- tryCatch(read_html(pagename),error=function(e){"e"})
+  if(webpage=="e"){next}
 
   #Using CSS selectors to scrape the biography section
 
   content<-xml_nodes(webpage,xpath='//*[@id="mw-content-text"]')
+  
   
   ## Content paragraph
   par1<-xml_nodes(webpage,xpath='//*[@id="mw-content-text"]/p[2]')
@@ -83,11 +85,12 @@ for(i in 1:nrow(df)){
   links<-lapply(box,function(x) html_attr(xml_node(x,"a"),"href"))
   
   twitter<-unlist(links)[grepl("twitter",unlist(links))]
+  if(!is.null(twitter)){
   if(length(twitter)>1){
     df$twitter1[i]<-twitter[1]
     df$twitter2[i]<-twitter[2]
   }else{df$twitter1[i]<-twitter[1]}
-    
+  }  
   #children
   #silblings 
   
@@ -127,4 +130,13 @@ for(i in 1:nrow(df)){
 }
 
 
-df$ballotpedia.org[42]
+
+sav<-dat.frame
+
+nrow(df)
+nrow(dat.frame)
+
+
+
+write.csv(df,"updated.csv")
+

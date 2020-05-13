@@ -73,7 +73,6 @@ Some politicians have several twitter accounts, which means we can't use the ind
 ```{r}
 
 load("accounts.rdata")
-
 load("tweets.Rdata")
 
 
@@ -100,11 +99,26 @@ screen_name TEXT,
 name TEXT);")
 
 ```
+Group 1:
+  candidates <-unique_id
+  districts  
+
+Group 2: 
+  Account
+  Friends
+  Tweets   status_id , user_id 
+  Followers 
+
+Group 3: 
+  candidates CANDID
+  raising
+  spending
+  committees COMMITTEEID
+  
 
 
 ### Primary Keys
 
-More importantly, it allows us to create 
 
 
 ```{r}
@@ -149,6 +163,7 @@ dbGetQuery(us, "
            FROM twaccounts;")                
 
 dbExecute(us,"DROP TABLE twitteraccounts;")
+
 
 ```
 

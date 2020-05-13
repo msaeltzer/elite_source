@@ -9,7 +9,7 @@ library(rvest)
 
 setwd("./scraping") # set working directory
 
-my_data <- read.csv("group_1_dataset_merged.csv",stringsAsFactors = F) #load data 
+  my_data <- read.csv("group_1_dataset_merged.csv",stringsAsFactors = F,sep = "\t") #load data 
 
 df = as.data.frame(my_data) # convert to a data frame
 
@@ -38,6 +38,7 @@ df$twitter2<-NA
 for(i in 1:nrow(df)){
   Sys.sleep(2)  
   
+  rm(par1)
   rm(twitter)
   rm(h2)
   rm(links)
@@ -48,12 +49,11 @@ for(i in 1:nrow(df)){
   rm(data)
   rm(value)
   
-  
   print(i)
-  
-  
   webpage <- tryCatch(read_html(df$ballotpedia.org[i]),error=function(e){"e"})
-  if(webpage=="e"){next}
+  if(webpage=="e"){
+    print("error")
+    next}
   
   pagename<-paste0("./profile_pages/",df$First.Name[i],"_",df$Name[i],".txt")
   wbpge<-as.character(webpage)
@@ -68,6 +68,7 @@ for(i in 1:nrow(df)){
   if(length(par1)>0){
   df$content[i]<-html_text(par1)
   links<-xml_nodes(webpage,xpath='//*[@id="mw-content-text"]/p[2]/a')
+  links<-html_text(links)
   df$District_link[i]<-links[grepl("District",links)][1]
   }
   
@@ -127,4 +128,6 @@ for(i in 1:nrow(df)){
 }
 
 
-df$ballotpedia.org[42]
+
+
+write.csv(df,"updated.csv")

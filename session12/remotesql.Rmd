@@ -1,0 +1,159 @@
+---
+title: "Remote Access"
+author: "Marius Sältzer"
+date: "6 4 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Remote Access to Data Bases
+
+As our course commences, our focus shifts from the combining of data structures to the uploading of data sets. As you all know, we will work with large datasets and will do so decentralized. This is particularly challenging in times of corona. 
+
+To answer this challenge, I will introduce the next feature that makes SQL databases so powerful: server based remote access. For this course I got a cloud based MYSQL database from google. 
+
+To access it, we will use the MYSQL package. It is just like SQLlite, but better suited for data transfer. 
+```{r}
+install.packages("RMySQL")
+library("RMySQL")
+```
+
+In contrast to storing data locally, we will now add data to an SQL server. To do so, we have to authentificate. For now, I created a number of accounts for you. You can build a connection to the data base by adding three kinds of information: 
+
+  Host: the IP address of the Server
+  user: the name of the account
+  password: preset now
+  port: Channel on your computer over which to communicate
+  name: Name of the database you like to access
+
+
+### Whitelisted VPN Channel!
+
+Now, servers require you to autheficate you are the one who you claim you are. I used the least annoying way of authentification, by IP address. I added all university IPs (at least I hope so) to the whitelist. Please activate your VPN clients before you try to access, or the server won't recognize you. By using the VPN client, you can enter the database through the Uni-IP network.
+
+If you like, I can add your IP to the whitelist! Send me an email.
+You can find out your IP by using this link https://www.whatismyip.com/
+
+I need the IPv4, not the IPv6!
+
+Let's try:
+
+```{r}
+
+db_user <- 'student3'
+db_password <- 'elite'
+db_name <- 'test'
+db_table <- 'candidates'
+db_host <- '35.193.111.129' # for local access
+db_port <- 3306
+
+mydb <-  dbConnect(RMySQL::MySQL(), user = db_user, password = db_password,
+                 dbname = db_name, host = db_host, port = db_port)
+
+```
+
+
+
+
+### Primary Keys
+
+
+
+```{r}
+dbExecute(us,"CREATE TABLE candidates(
+ Name TEXT,
+ First_Name TEXT,
+ District TEXT , 
+ Party TEXT,
+ Election TEXT,
+ Incumbent TEXT , 
+ twitter1 TEXT,
+ twitter2 TEXT,
+ content TEXT, 
+ District_link TEXT,
+ PRIMARY KEY(District)
+          );")
+
+dbExecute(us,"CREATE TABLE districts(
+ District TEXT ,
+ District_link TEXT,
+ PRIMARY KEY(District)
+          );")
+
+```
+
+Task 1: Choose the important variables of your group's data set and create an empty table in your copy of the database. 
+
+Send me the code.
+
+
+## Inserting data
+
+Now, as we have created the empty data sets, we can fill them with the data at hand. We can therefore migrate data from the large, unconstrained table in the more limited, structured table.
+
+```{r}
+### Import your data into the table
+
+
+d1<-dbGetQuery(us, '
+SELECT user_id
+FROM twitteraccounts;')
+
+names(accounts)
+
+d1<-dbGetQuery(us, '
+SELECT name
+FROM personal;')
+
+
+
+```
+
+
+```{r}
+
+dbExecute(us,"INSERT INTO twaccounts
+SELECT user_id ,screen_name ,name
+FROM twitteraccounts;")
+
+dbGetQuery(us, " 
+           SELECT user_id , screen_name , name
+           FROM twaccounts;")                
+
+dbExecute(us,"DROP TABLE twitteraccounts;")
+
+
+```
+
+
+```{r}
+
+dbExecute(us,"DROP TABLE twittertext;")
+
+dbExecute(us,"CREATE TABLE twittertext(
+status_id INTERGER PRIMARY KEY,
+user_id INTEGER,
+screen_name TEXT,
+text TEXT);")
+
+
+
+dbExecute(us,"INSERT INTO twittertext
+SELECT status_id, user_id ,screen_name , text 
+FROM tweets;")
+
+
+
+dbGetQuery(us, " 
+           SELECT status_id, user_id ,screen_name , text
+           FROM twittertext;")                
+
+
+```
+
+
+
+``{r}

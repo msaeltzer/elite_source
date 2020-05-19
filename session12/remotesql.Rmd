@@ -17,15 +17,16 @@ To answer this challenge, I will introduce the next feature that makes SQL datab
 
 To access it, we will use the MYSQL package. It is just like SQLlite, but better suited for data transfer. 
 ```{r}
-install.packages("RMySQL")
+if(!require("RMySQL")){install.packages("RSQLite")}
 library("RMySQL")
+
 ```
 
 In contrast to storing data locally, we will now add data to an SQL server. To do so, we have to authentificate. For now, I created a number of accounts for you. You can build a connection to the data base by adding three kinds of information: 
 
   Host: the IP address of the Server
-  user: the name of the account
-  password: preset now
+  user: the name of the account, your uni abbreviation
+  password: preset now with your student number
   port: Channel on your computer over which to communicate
   name: Name of the database you like to access
 
@@ -43,51 +44,77 @@ Let's try:
 
 ```{r}
 
-db_user <- 'student3'
-db_password <- 'elite'
-db_name <- 'test'
-db_table <- 'candidates'
-db_host <- '35.193.111.129' # for local access
+db_user <- 'youruniid'
+db_password <- 'studentIDnumber'
+db_name <- 'congress'
+db_host <- '35.193.111.129' # our server access
 db_port <- 3306
 
-mydb <-  dbConnect(RMySQL::MySQL(), user = db_user, password = db_password,
+us <-  dbConnect(RMySQL::MySQL(), user = db_user, password = db_password,
                  dbname = db_name, host = db_host, port = db_port)
+
+dbListTables(us)
 
 ```
 
 
+```{r}
 
+candidata<-read.csv("alldata.csv",encoding = "UTF-8",stringsAsFactors = F)
+``` 
 
 ### Primary Keys
 
+As discussed earlier, we need to define primary keys for all tables and create the ability to join them on demand. 
 
+
+1000 0001
+2000 0001 
+
+
+We now prepate our dataset, prepare an ID variable and clean it a tiny bit. 
 
 ```{r}
+
+library(stringr)
+      
+candidata$ID<-as.numeric(paste0(1000,seq(1,nrow(candidata))))
+
+candidata$twitter1<-gsub("https://www.twitter.com/","",candidata$twitter1)
+candidata$twitter2<-gsub("https://www.twitter.com/","",candidata$twitter2)
+
+candidata$ballotpedia.org<-NULL # the excel concat function seems to have trouble with UTF-8
+names(candidata)[3]<-"First_Name"
+
+``` 
+
+Import the dataset completely
+```{r}
+dbWriteTable(us,"cand_raw",candidata,overwrite=T)
+
+```
+
+Now, we can create a table inside our database
+```{r}
 dbExecute(us,"CREATE TABLE candidates(
+ ID varchar(10) primary key,
  Name TEXT,
  First_Name TEXT,
  District TEXT , 
  Party TEXT,
  Election TEXT,
- Incumbent TEXT , 
+ Incumbent TEXT, 
  twitter1 TEXT,
  twitter2 TEXT,
  content TEXT, 
- District_link TEXT,
- PRIMARY KEY(District)
-          );")
+ District_link TEXT);")
 
 dbExecute(us,"CREATE TABLE districts(
- District TEXT ,
- District_link TEXT,
- PRIMARY KEY(District)
+ District varchar(5) primary key,
+ District_link TEXT
           );")
 
 ```
-
-Task 1: Choose the important variables of your group's data set and create an empty table in your copy of the database. 
-
-Send me the code.
 
 
 ## Inserting data
@@ -95,19 +122,11 @@ Send me the code.
 Now, as we have created the empty data sets, we can fill them with the data at hand. We can therefore migrate data from the large, unconstrained table in the more limited, structured table.
 
 ```{r}
-### Import your data into the table
-
-
-d1<-dbGetQuery(us, '
-SELECT user_id
-FROM twitteraccounts;')
-
-names(accounts)
+### Check whether it worked!
 
 d1<-dbGetQuery(us, '
-SELECT name
-FROM personal;')
-
+SELECT *
+FROM cand_raw;')
 
 
 ```
@@ -115,45 +134,35 @@ FROM personal;')
 
 ```{r}
 
-dbExecute(us,"INSERT INTO twaccounts
-SELECT user_id ,screen_name ,name
-FROM twitteraccounts;")
-
-dbGetQuery(us, " 
-           SELECT user_id , screen_name , name
-           FROM twaccounts;")                
-
-dbExecute(us,"DROP TABLE twitteraccounts;")
-
-
+dbExecute(us,"INSERT INTO candidates
+ SELECT ID ,
+ Name,
+ First_Name,
+ District, 
+ Party,
+ Election,
+ Incumbent, 
+ twitter1,
+ twitter2,
+ content, 
+ District_link
+FROM cand_raw;")
 ```
 
+Now we can check if it worked!
 
 ```{r}
-
-dbExecute(us,"DROP TABLE twittertext;")
-
-dbExecute(us,"CREATE TABLE twittertext(
-status_id INTERGER PRIMARY KEY,
-user_id INTEGER,
-screen_name TEXT,
-text TEXT);")
-
-
-
-dbExecute(us,"INSERT INTO twittertext
-SELECT status_id, user_id ,screen_name , text 
-FROM tweets;")
-
-
-
 dbGetQuery(us, " 
-           SELECT status_id, user_id ,screen_name , text
-           FROM twittertext;")                
-
+           SELECT twitter1
+           FROM candidates;")                
 
 ```
 
+And remove the temporary import table
 
+```{r}
+dbExecute(us,"DROP TABLE cand_raw;")
 
-``{r}
+dbDisconnect(us)
+
+```

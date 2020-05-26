@@ -1,0 +1,428 @@
+---
+title: "Getting and Analyzing your Data"
+author: "Marius Sältzer"
+date: "6 4 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+1. Our database
+
+2. Building data 
+
+3. Your term papers
+
+
+
+
+
+## Remote Access to Data Bases
+
+```{r}
+if(!require("RMySQL")){install.packages("RMySQL")}
+library("RMySQL")
+
+```
+
+In contrast to storing data locally, we will now add data to an SQL server. To do so, we have to authentificate. For now, I created a number of accounts for you. You can build a connection to the data base by adding three kinds of information: 
+
+  Host: the IP address of the Server
+  user: the name of the account, your uni abbreviation
+  password: preset now with your student number
+  port: Channel on your computer over which to communicate
+  name: Name of the database you like to access
+
+
+### Whitelisted VPN Channel!
+
+Now, servers require you to autheficate you are the one who you claim you are. I used the least annoying way of authentification, by IP address. I added all university IPs (at least I hope so) to the whitelist. Please activate your VPN clients before you try to access, or the server won't recognize you. By using the VPN client, you can enter the database through the Uni-IP network.
+
+If you like, I can add your IP to the whitelist! Send me an email.
+You can find out your IP by using this link https://www.whatismyip.com/
+
+I need the IPv4, not the IPv6!
+
+Let's try:
+
+```{r}
+
+db_user <- 'student3'
+db_password <- 'elite'
+db_name <- 'congress'
+db_host <- '35.193.111.129' # our server access
+db_port <- 3306
+
+us <-  dbConnect(RMySQL::MySQL(), user = db_user, password = db_password,
+                 dbname = db_name, host = db_host, port = db_port)
+
+dbListTables(us)
+
+
+```
+
+
+Today: what we put in!
+
+Requesting the data for your questions!
+
+## Requests
+
+
+
+
+
+Getting data out of single data sets
+
+
+
+Select
+
+```{r}
+
+pres<-dbGetQuery(us,"SELECT * FROM candidates;")
+
+pres<-dbGetQuery(us,"SELECT * FROM twitteraccounts;")
+```
+
+If you want to run any kind of text analysis, make sure you run this line and return to its original format. While MYSQL stores data in UTF8, data exported to rdata is usually saved with your locale. 
+
+```{r}
+
+pres$text<-iconv(pres$text,"UTF-8","windows-1252")
+
+
+```
+
+which
+```{r}
+
+dems<-dbGetQuery(us,'SELECT * 
+                 FROM candidates
+                 WHERE Party = "Dem";'              )
+
+```
+
+## Join Operations 
+
+```{r}
+twjoin<-dbGetQuery(us,'SELECT * FROM candidates
+LEFT JOIN twaccounts ON candidates.twitter1 = twaccounts.screen_name;')
+
+accounts$screen_name
+
+cands<-dbGetQuery(us,'SELECT * 
+                 FROM candidates
+;'              )
+
+
+```
+
+
+## Creating your Dataset from SQL
+
+
+```{r}
+
+
+
+
+``` 
+
+
+
+
+
+As we now have access toa combined (yet still badly merged dataset) we can run a first set of nice visualizations and empirical tests. 
+
+Let's just get our data, but only the succesfully merged.
+
+```{r}
+accounts<-twjoin
+accounts<-accounts[!is.na(accounts$user_id),]
+```
+
+
+## Visualizing Data in R
+
+R is by far the most powerful tool for dataviz and the one category in which it is not replaceable by python yet. 
+
+R has an incredible range of tools, from simple baseR, over ggplot2 to interactive apps you can program in shiny or plotly. 
+
+Today, we start in base, but feel free to venture into the tidyverse. 
+
+
+# Scatterplot
+
+A first nice way to visualize data is a scatterplot. Let's take a look at two continous variables, follower count and the number of tweets the account has sent.
+
+
+```{r}
+
+plot(accounts$followers_count,accounts$statuses_count)
+
+
+```
+As we can see, there are some extreme outliers. As Corona experienced students, you will by now we painfully aware of exponential growth and how to visualize it. 
+
+Taking the log of both varibales allows us to oberserve a nice linear relationship, perfect to do some premilimary analysis on.
+
+```{r}
+
+plot(log(accounts$followers_count),log(accounts$statuses_count))
+
+
+```
+
+But first, basics. As you can see, these labels became very ugly by adding a formula. Of course, you can just create able named clones, but we can just manipulate the labels.
+
+Just as inside other functions, arguments are separated by commata:
+
+```{r}
+
+plot(log(accounts$followers_count),log(accounts$statuses_count),
+     ylab="Logged Tweets",
+     xlab="Logged Followers",
+     main="Tweets and Followers")
+
+
+```
+
+Let's add some color. First, we need to recode the party variable a little bit:
+
+```{r}
+
+## recode other parties to others
+accounts$Party<-ifelse(accounts$Party!="Dem" & accounts$Party!="Rep","other",accounts$Party)
+
+## turn it into a factor
+accounts$Party<-as.factor(as.character(accounts$Party))
+```
+
+Now, let us plot again by party color
+```{r}
+plot(log(accounts$followers_count),log(accounts$statuses_count),
+     ylab="Logged Tweets",
+     xlab="Logged Followers",
+     main="Tweets and Followers",
+     col=c("blue","yellow","red")[accounts$Party])
+
+# This is actually a bit counterintuitve. 
+# The colors you want to give to each party are created by two information pieces
+  # Which party has each line
+  # which color do we give to each party 
+
+head(accounts$Party)
+# col= c('red',"yellow","blue)
+      #    |      |         |
+# Levels: Dem   other      Rep 
+
+```
+Additionally to colors, we can also manipulate the type of dot we put in there!
+In r, there are 20 different point styles you can find here http://www.sthda.com/english/wiki/r-plot-pch-symbols-the-different-point-shapes-available-in-r and in the R documenatiom.
+
+
+Following the same logic as with colors, we can now add pointstyles to the plot, depending on a variable. We choose incumbency.
+```{r}
+
+
+accounts$Incumbent<-as.factor(as.character(accounts$Incumbent))
+
+levels(accounts$Incumbent)
+## as you can see, the data is still a bit messy. 
+## I suppose now that "" is a yes <- ;)
+
+
+plot(log(accounts$followers_count),log(accounts$statuses_count),
+     ylab="Logged Tweets",
+     xlab="Logged Followers",
+     main="Tweets and Followers",
+     col=c("red","yellow","blue")[accounts$Party]
+     ,pch=c(19,1,1,19)[as.factor(accounts$Incumbent)]
+     )
+
+```
+As we can see by visual inspection, incumbents are way more successfully on Twitter and also more active. 
+
+We can further visualize this by for example changing the size of these points using cex.
+
+
+```{r}
+
+plot(log(accounts$followers_count),log(accounts$statuses_count),
+     ylab="Logged Tweets",
+     xlab="Logged Followers",
+     main="Tweets and Followers",
+     col=c("red","yellow","blue")[accounts$Party],pch=c(1,1,1,19)[as.factor(accounts$Incumbent)]
+     ,cex=c(1,1.2,1.2,2)[as.factor(accounts$Incumbent)]
+     )
+
+```
+
+These commands are so called first layer commands. They are called by a plot command. However, you can add additional features to a plot if you like. 
+
+After we called a plot, we can now add additional layers. For example, we can plot a regression line through this. More on this later!
+```{r}
+plot(log(accounts$followers_count),log(accounts$statuses_count),
+     ylab="Logged Tweets",
+     xlab="Logged Followers",
+     main="Tweets and Followers",
+     col=c("red","yellow","blue")[accounts$Party],pch=c(1,1,1,19)[as.factor(accounts$Incumbent)]
+     ,cex=c(1,1.2,1.2,2)[as.factor(accounts$Incumbent)]
+     )
+## this is a so called formula notation. With the ~ you tell R that the dependent variable is on the left side. As you see here, we had to shift it around and put the statuses count to the left side instead. 
+
+abline(lm(log(accounts$statuses_count)~log(accounts$followers_count)))
+
+
+```
+
+# Text 
+
+```{r}
+# let's choose 10 random names
+chosen<-accounts[sample(nrow(accounts),10),]
+
+# call our plot
+plot(log(accounts$followers_count),log(accounts$statuses_count),
+     ylab="Logged Tweets",
+     xlab="Logged Followers",
+     main="Tweets and Followers",
+     col=c("red","yellow","blue")[accounts$Party],pch=c(1,1,1,19)[as.factor(accounts$Incumbent)]
+     ,cex=c(1,1.2,1.2,2)[as.factor(accounts$Incumbent)]
+     )
+
+# And add the names here :)
+
+        # tell the computer where the points are      and what to put there
+text(log(chosen$followers_count),log(chosen$statuses_count),labels=chosen$Name)
+
+
+
+```
+
+# Barplot
+
+We can also do simple barplots: Do not forget the table  command in between.
+
+```{r}
+
+barplot(table(accounts$Party),col=c("blue","yellow","red"))
+
+
+```
+
+# Histogram
+
+To understand variable distributions of continuous variables, histograms are very useful.
+
+```{r}
+
+hist(accounts$followers_count,breaks=100)
+
+
+```
+
+# Boxplot
+
+To plot cont versus classes, we can use boxplots. Here again we need the categorical variable to be factors. 
+
+To get the boxplot, you have to use the formular ~
+and the IV has to be a factor!
+
+```{r}
+
+plot(log(accounts$statuses_count)~as.factor(accounts$Party))
+
+
+```
+
+## Hypothesis testing in R
+
+Even though this course is not about hypothesis testing, I want you to get one short introduction in how to do very basic stastical stuff in R. 
+
+
+
+# Simple t-test
+The simplest test is the t.test, it will allow you to compare means between exactly two groups.
+
+```{r}
+t.test(log(accounts$statuses_count)~accounts$Party=="Dem",na.rm=T)
+
+```
+
+
+
+# Linear Regression
+
+More typical are linear models. First, let's remove all the 0es, since our dv has to be logged, and the regression won't accept infinites.
+
+```{r}
+accounts<-accounts[accounts$followers_count>0,]
+accounts<-accounts[accounts$statuses_count>0,]
+```
+
+
+Again, we need the formula notation.
+```{r}
+mod1<-lm(log(accounts$followers_count)~accounts$Party)
+summary(mod1)
+```
+
+We can add IV's by using the +
+
+```{r}
+mod2<-lm(log(accounts$followers_count)~accounts$Party+accounts$Incumbent+accounts$Election)
+summary(mod2)
+
+```
+
+And now plot the results
+
+```{r}
+plot(mod2)
+
+
+```
+# Logistic Regression
+
+If your dependent variable is binary, we have use logistic regression!
+
+
+A typical binary var is whether a candidate has a twitter account
+```{r}
+twjoin$has_account<-ifelse(is.na(twjoin$twitter1),0,1)
+``` 
+
+We assume that incumbents are more likely to twitter. Let's test. 
+
+```{r}
+twjoin$Party<-ifelse(twjoin$Party!="Dem" & twjoin$Party!="Rep","other",twjoin$Party)
+twjoin$Party<-as.factor(as.character(twjoin$Party))
+```
+
+
+```{r}
+
+table(twjoin$Incumbent)
+
+twjoin$Incumbent<-ifelse(twjoin$Incumbent=="","yes",twjoin$Incumbent)
+twjoin$Incumbent<-ifelse(twjoin$Incumbent=="no ","no",twjoin$Incumbent)
+twjoin$Incumbent<-ifelse(twjoin$Incumbent=="not","no",twjoin$Incumbent)
+twjoin$Incumbent<-ifelse(twjoin$Incumbent=="Sex","no",twjoin$Incumbent)
+
+```
+
+```{r}
+
+gmod<-glm(twjoin$has_account~twjoin$Incumbent+twjoin$Party,family="binomial")
+
+summary(gmod)
+
+```
+
+
+

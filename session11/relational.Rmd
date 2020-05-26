@@ -60,8 +60,25 @@ Next week, we will combine this data using keys, do create datasets from scratch
 
 
 ```{r}
+install.packages("RMySQL")
+library("RMySQL")
 
-us <- dbConnect(RSQLite::SQLite(), "twitter2.sqlite")
+db_user <- 'student'
+db_password <- 'new_password'
+db_name <- 'congress'
+db_table <- 'candidates'
+db_host <- '127.0.0.1' # for local access
+db_port <- 3306
+
+# 3. Read data from db
+mydb <-  dbConnect(RMySQL::MySQL(), user = db_user, password = db_password,
+                 dbname = db_name, host = db_host, port = db_port)
+
+
+s <- paste0("select * from ", db_table)
+rs <- dbSendQuery(mydb, s)
+
+#us <- dbConnect(RSQLite::SQLite(), "twitter2.sqlite")
 
 ```
 
@@ -76,7 +93,23 @@ load("accounts.rdata")
 load("tweets.Rdata")
 
 
-dbCreateTable(us,"twitteraccounts",accounts,overwrite=T)
+dbExecute(us,"DROP TABLE twitteraccounts;")
+dbExecute(us,"DROP TABLE tweets;")
+
+
+accounts<-accounts[,which(sapply(accounts, class) != "list")]
+
+accounts$text<-iconv(accounts$text,"windows-1252","UTF-8")
+
+accounts<-accounts[,1:10]
+
+
+dbWriteTable(us,"twitteraccounts",accounts,overwrite=T)
+
+
+
+
+
 dbCreateTable(us,"tweets",all,overwrite=T)
 
 dbListTables(us)
@@ -116,19 +149,29 @@ Group 3:
   committees COMMITTEEID
   
 
-
 ### Primary Keys
 
 
-
 ```{r}
+dbExecute(us,"CREATE TABLE candidates(
+ Name TEXT,
+ First_Name TEXT,
+ District TEXT , 
+ Party TEXT,
+ Election TEXT,
+ Incumbent TEXT , 
+ twitter1 TEXT,
+ twitter2 TEXT,
+ content TEXT, 
+ District_link TEXT,
+ PRIMARY KEY(District)
+          );")
 
-dbExecute(us,"DROP TABLE twaccounts;")
-
-dbExecute(us,"CREATE TABLE twaccounts(
-user_id INTEGER,
-screen_name TEXT,
-name TEXT);")
+dbExecute(us,"CREATE TABLE districts(
+ District TEXT ,
+ District_link TEXT,
+ PRIMARY KEY(District)
+          );")
 
 ```
 
@@ -145,9 +188,17 @@ Now, as we have created the empty data sets, we can fill them with the data at h
 ### Import your data into the table
 
 
-dbGetQuery(us, "
+d1<-dbGetQuery(us, '
 SELECT user_id
-FROM twitteraccounts;")
+FROM twitteraccounts;')
+
+names(accounts)
+
+d1<-dbGetQuery(us, '
+SELECT name
+FROM personal;')
+
+
 
 ```
 
@@ -195,4 +246,6 @@ dbGetQuery(us, "
 
 
 
-``{r}
+```{r}
+
+```

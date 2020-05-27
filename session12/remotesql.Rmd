@@ -17,8 +17,11 @@ To answer this challenge, I will introduce the next feature that makes SQL datab
 
 To access it, we will use the MYSQL package. It is just like SQLlite, but better suited for data transfer. 
 ```{r}
-if(!require("RMySQL")){install.packages("RSQLite")}
+if(!require("RMySQL")){install.packages("RMySQL")}
 library("RMySQL")
+
+
+dbListTables(us)
 
 ```
 
@@ -44,8 +47,8 @@ Let's try:
 
 ```{r}
 
-db_user <- 'youruniid'
-db_password <- 'studentIDnumber'
+db_user <- ''
+db_password <- ''
 db_name <- 'congress'
 db_host <- '35.193.111.129' # our server access
 db_port <- 3306
@@ -55,12 +58,14 @@ us <-  dbConnect(RMySQL::MySQL(), user = db_user, password = db_password,
 
 dbListTables(us)
 
+
 ```
 
 
 ```{r}
 
 candidata<-read.csv("alldata.csv",encoding = "UTF-8",stringsAsFactors = F)
+
 ``` 
 
 ### Primary Keys
@@ -96,6 +101,7 @@ dbWriteTable(us,"cand_raw",candidata,overwrite=T)
 
 Now, we can create a table inside our database
 ```{r}
+
 dbExecute(us,"CREATE TABLE candidates(
  ID varchar(10) primary key,
  Name TEXT,
@@ -166,3 +172,103 @@ dbExecute(us,"DROP TABLE cand_raw;")
 dbDisconnect(us)
 
 ```
+
+## Next Week
+
+Today: what we put in!
+
+Requesting the data for your questions!
+Join Operations, data set creations out of SQL
+
+
+What variabels?
+Group 1: rerun the scraping, clean the data
+where are the presidential candidates?
+Group 2: fill up the accounts and come back to me to scrape them
+Group 3: Put in the data you collected and structure it!
+
+
+```{r}
+
+load("accounts.rdata")
+
+accounts<-accounts[,which(sapply(accounts, class) != "list")]
+
+accounts<-as.data.frame(accounts)
+
+for(i in 1:ncol(accounts)){
+if(typeof(accounts[,i])=="character"){
+accounts[,i]<-iconv(accounts[,i],"latin1","UTF-8")
+accounts[,i]<-iconv(accounts[,i],"windows-1252","UTF-8")}}    
+
+dbWriteTable(us,"twitteraccounts",accounts,overwrite=T)
+
+
+```
+
+
+
+```{r}
+dbExecute(us,"DROP TABLE twaccounts;")
+
+dbExecute(us, "CREATE TABLE twaccounts(
+user_id varchar(30) PRIMARY KEY,
+screen_name TEXT,
+location TEXT,
+description TEXT,
+account_created_at TEXT,
+followers_count INTEGER,
+friends_count INTEGER,
+statuses_count INTEGER,
+favourites_count INTEGER,
+status_id TEXT,
+created_at TEXT,
+text TEXT,
+source TEXT,
+is_quote BOOLEAN,
+is_retweetet BOOLEAN,
+retweet_count INTEGER,
+retweet_status_id varchar(30)
+);") 
+
+```
+
+
+
+```{r}
+dbExecute(us,"INSERT INTO twaccounts
+SELECT user_id,
+screen_name,
+location,
+description,
+account_created_at,
+followers_count,
+friends_count,
+statuses_count,
+favourites_count,
+status_id,
+created_at,
+text,
+source,
+is_quote,
+is_retweet,
+retweet_count,
+retweet_status_id
+FROM twitteraccounts;")
+
+```
+
+```{r}
+p2<-dbGetQuery(us, " 
+           SELECT *
+           FROM twitteraccounts;")  
+
+dbGetQuery(us, " 
+           SELECT *
+           FROM twaccounts;")  
+
+```
+
+ 
+ 
+

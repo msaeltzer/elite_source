@@ -16,6 +16,10 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
+
+
+
+
 This data set is so called panel data with individual*time as the unit of analysis. For each candidate, we have predictions over time. 
 
 ```{r}
@@ -29,8 +33,17 @@ In practice, is done using the formula notation: it is special way to write vari
 
 
 ```{r}
-                      # this is a tilde!      
-vs<-aggregate(voteshare~candidate,frc,FUN="mean")
+    
+?aggregate
+
+                  # this is a tilde!      
+vs<-aggregate(voteshare~candidate,
+              frc,
+              FUN="mean"
+              )
+
+
+
 
 ```  
 
@@ -65,7 +78,6 @@ library(reshape2)
 
 d1<-reshape2::dcast(frc, candidate ~ model,fun=mean, value.var="voteshare",)
 
-
 ```
 
 
@@ -84,12 +96,19 @@ d2<-reshape2::dcast(frc, candidate ~ week,fun=mean, value.var="voteshare")
 
 Now we can "melt" the data down into long form again.  
 ```{r}
+
 d4<-reshape2::melt(d2)
 
 ```
 
 
 # The Twitter API
+
+Application Programming Interface
+
+
+
+
 
 First, we need an API key. Since they are private property, I will not put them online. 
 To do so, create a twitter account and go to twitter Apps. there, you can apply for a developer's account.
@@ -103,21 +122,24 @@ I safe my tokens in a dropbox placed csv file. You will not be able to use mine.
 ```{r}
 # install.packages('rtweet')
 
+
+
+
 if(!require('rtweet')){install.packages('rtweet')}
 
 library(rtweet)
 
-create_token(app='',
-             '',
-             '',
-             '',
-             ''
-             ,access_token = NULL)
+rtweet::create_token(app = "congresswatch1","B8OBjpVKX6m6CEKnDG1OFFjCG",
+                     "djD3yWujirTFA270o1QNR70WL0gnGekLkowxUd9nwHmgpHAOFb","907615723790520320-RWwRTkFKupliSuQ82juulcAIcGWzRpF",
+"BJVrBLs0IaickfNZd3cAssncQmMXuHw80X3smDjQsZTPv")
 
-rtweet::create_token(app = "presscrape2020",
-"UiAifHyM6xafhqKiKLJd5rJAC",
-"pICpvowgKp8ueSfJZVhrkuwFhsmNQISJfyXUNsJKTiIKw5BwlQ")
 
+c1<-create_token(app = "congresswatch1","B8OBjpVKX6m6CEKnDG1OFFjCG",
+                     "djD3yWujirTFA270o1QNR70WL0gnGekLkowxUd9nwHmgpHAOFb","907615723790520320-RWwRTkFKupliSuQ82juulcAIcGWzRpF",
+"BJVrBLs0IaickfNZd3cAssncQmMXuHw80X3smDjQsZTPv")
+
+
+r<-rate_limits(c1)
 
 ```
 
@@ -149,6 +171,9 @@ You have no idea about the sampling when using the search tweets functions.
 input<-'realdonaldtrump'
 acc<-lookup_users(input)
 
+d1<-users_data(acc)
+
+
 ```
 
 A more stable way to collect data is by downloading timelines of users.
@@ -157,7 +182,7 @@ For a single account, you can simply use
 
 ```{r}
 
-g<-get_timeline(input,3000,check=FALSE)
+g<-get_timeline(input,3200,check=FALSE)
 
 ```
 
@@ -186,19 +211,16 @@ g0<-rbind(g,g1)
 
 ```
 
-## Level of Analysis
-
-Data storage's most important feature is unit of analysis. Unit of analysis describes the meaning of a line or row in a data set. Unit of analysis could be the individual (in a cross sectional design), but also groups of individuals (party) or multiple observations per individual (such as panel data). 
-
-Our Twitter data set returns time series data: 1000 observations per individual. The users_ _data command returns INDIVIDUAL LEVEL data. We can just add it to the data set. 
 
 ```{r}
 
-g0<-cbind(g0,users_data(g0))
+
+hist(g$created_at,breaks="hours")
+
 
 ```
 
-Transforming data from a more complex file format such as xml to a rectungular form always requires decisions on the level of analysis. Are we interested in individual MPs, MPs in each election period or party aggregates. And if so, how do we store it? This part of the script will deal with these questions. 
+
 
 
 ## Get Networks
@@ -207,9 +229,10 @@ Creating networks from twitter data is on the one hand trivial, on the other tim
 
 Rtweet provides us with two very simple interpretations of the follower relationsship: follwers and friends. As we discussed, friends tell us something about the preferences of the account: your friends decide what kind of input you get on your timeline. Your followers however can be considered your audience. For politicians, these relationships can be interpreted as seeing the followers as potential voters and friends as either news sources or affiliated accounts. You spend attention to add followers to an account and get ready to comment, retweet and reply. 
 
-Let us reuse the account of c_lindner we scraped using the lookup_users function: 
 
 ```{r}
+
+
 acc$followers_count
 
 acc$friends_count

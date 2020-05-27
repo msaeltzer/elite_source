@@ -24,7 +24,6 @@ if(!require(httr)){install.packages("httr")}
 
 # Webscraping in R
 
-
 Last week we ecountered the first direct access of web based data through R by calling API's and downloading data directly. But what if data is stored on a homepage in a less structured and easy way, because a) the developers don't want to give a away all their data or b) didn't have the time or imagination to do it yet. 
 
 The answer is to "scrape" data, meaning we read out an "unstructured" page from the Internet. Unstructured means that we have an idea about where the data is, but it is not in a dataset of any source, so we have to crack open the page itself.
@@ -63,16 +62,14 @@ Html is a close relative of the XML format we learned, a tree-formed data struct
 
 Accordingly, we can use XML methods on htmls. The main difference is that while html is a type of XML, it is standardized for web pages. In each of these tree structures the same elements are used all over again, like boxes, text elements, links or tables, following a common syntax.
 
-
 html is always structured using 
 
 <html>  begins something  
-<\html> ends something
-
 
 <body>  begins something  
 <\body> ends something
 
+<\html> ends something
 
 ### Blocks 
 
@@ -80,12 +77,10 @@ html is always structured using
 
 <span>
 
-
 #### Text
 
 <h>  begins something  
 <\h> ends something
-
 
 
 <h> headers 
@@ -96,10 +91,12 @@ html is always structured using
 
 <ul> lists 
 
-
 #### Tables 
 
 <table>
+
+  <tr>
+  <td>
 
 For the poupose of data collection, tables are of course a prime target for web scraping in social sciences. 
 
@@ -108,7 +105,6 @@ Rvest contains useful utilities to access tables and turn them into R data.frame
 #### Links 
 
 To go further down a homepage or to download files from servers, it is very useful to store links from homepages. Links are typically stored in href containers.
-
 
 <a> href 
 
@@ -121,7 +117,7 @@ To find these adresses we use so called selectors, which describe the way down f
 
 You can use either CSS selectors or xpathes. Xpathes are more intuitive to understand in terms of html. It is a structured query language for html. 
 
-To find a specific element in a homepage, you can use two useful tools in the beginning. The inspect function in Chrome or a selector Gadget. Both allow you to hover your mouse over elements of an homepage and show you the respective element in the html file simultaneously. 
+To find a specific element in a homepage, you can use two useful tools in the beginning. The inspect function in Chrome or a Selector Gadget. Both allow you to hover your mouse over elements of an homepage and show you the respective element in the html file simultaneously. 
 
 After you found the element, you can just right click and copy the xpath.
 
@@ -131,10 +127,11 @@ Go on wiki, use the selector tool and hover around over the hamster box until th
 
 Paste it in here and apply the xml_nodes function. XML nodes copies an element and all its subelements in a new, smaller XML. We then can analyze it further.
 
-
 ```{r}
+
 boxpath<-'//*[@id="mw-content-text"]/div/table[1]'
 infobox<- xml_nodes(test_html,xpath=boxpath)
+
 ```
 
 We can for example get out all the text now.
@@ -147,7 +144,6 @@ But this looks a bit messy. Looking again at the html, we see that each line in 
 
 ```{r}
 hamstertab<-html_table(infobox)[[1]]
-
 ```
 
 Now, we have gotten the text in an okay form. But, we want to get all the links. To understand better how html works, let's look at each individual <tr>. It is made up of of <td>, which are columns, each. And again, some of them are more than just text, they are elements of type <a>, which allows storing a link. 
@@ -174,6 +170,7 @@ Last week we learned how we can manipulate and look through URL's. This is also 
 ```{r}
 
 search<-search[is.na(search)==F]
+
 s<-list()
 
 for(i in 1:length(search)){
@@ -181,7 +178,11 @@ for(i in 1:length(search)){
 url<-paste0("https://en.wikipedia.org",search[i])
 
 s[[i]]<-xml2::read_xml(url)  
+
 }
+
+
+
 
 ```
 
@@ -238,8 +239,8 @@ text<-lapply(box,html_text) # get the text out of there
 
 atr<-lapply(box,function(x)html_nodes(x,"p")) # get the text out of there
 
-
 atr<-lapply(box,function(x)html_nodes(x,"div")) # get the text out of 
+
 x<-atr[[14]]
 lapply(atr,function(x) list(cat=html_text(x[1]),val=html_text(x[2])))
 

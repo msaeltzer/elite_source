@@ -1,5 +1,5 @@
 ---
-title: "Relational Datasets and SQL"
+title: "Relational Databases"
 author: "Marius Sältzer"
 date: "6 4 2020"
 output: html_document
@@ -30,13 +30,17 @@ exp<-read.csv("exp_pres.csv")
 library(rtweet)
 
 load("JonesDougTimeline.rda")
+
 accounts<-users_data(JonesDougTimeline)
 
 main<-read.csv("Dataset Political Elites.csv",stringsAsFactors = F)
+
+main$user_id<-NA
+main$user_id[main$Name=="Jones" & main$First.Name=="Doug"]<-"239548513"
+
 candidates<-read.csv("candidate_summary_2020.csv",stringsAsFactors = F)
 
 ```
-
 
 You already collected some data from all these different data sources. We now can combine them and make them relational. Before, we will have to deal with some unit of analysis problems. 
 
@@ -66,7 +70,6 @@ But, as we see, there is also some information that is election dependent
 
 ```{r}
 election<-personal[,c(4,5,6)]
-
 
 ```
 
@@ -98,10 +101,16 @@ After basing all candidates here, we can create KEY.
 
 Let's first create a unique key to start with. 
 
+```{r}
+e<-substr(candidates$Cand_Id[1],1,1)
+state<-substr(candidates$Cand_Id[1],3,4)
+dis<-substr(candidates$Cand_Id[1],5,6)
+
+``` 
 
 ID's should be unique but have the same total length, and also should be identifiable as IDs. Therefore we create a running Value of the Form 
 
-  CAND000001
+CAND000001
   
 to potentially store 999.999 candidates. They will always be characters of length 10, so we can extract numbers automatically if necessary.
 
@@ -113,15 +122,22 @@ personal$ID<-paste0("CAND",str_pad(seq(1,nrow(personal)), 6, pad = "0"))
 
 ```
 
-
 Now, we want to add this ID to the candidates dataset. To do so, we need to merge the candidates set, as we did in Session 6 of this course. 
 
 As the name-combination is not unique and differs between sources, we need to combine on the district-lastname combination. 
 
 ```{r}
 
+candidates$Cand_Name
+```
+
+
+```{r}
+
 personal$District<-as.character(personal$District)
   
+candidates$Cand_Office_Dist
+
   splits<-strsplit(personal$District,"-")
   state<-sapply(splits,"[[",1)
   number<-sapply(splits,"[[",2)
@@ -152,13 +168,15 @@ names1<-strsplit(candidates$Cand_Name,",")
   personal$lastname<-toupper(personal$Name)
   personal$firstname<-toupper(personal$First.Name)
 
-
 ```
 
 We add the id Variable to all thoses rows of the candidates dataset that are also in the main dataset
 
 ```{r}
+p1<-personal[,15:23]
+
 candidates<-merge(p1,candidates,by=c("lastname","Cand_Office_Dist","Cand_Office_St"),all.y=T)
+
 ```
 
 ## Building an SQL Database
@@ -176,6 +194,7 @@ First, we create a database. It will pop up in your working directory as a file.
 ```{r}
 
 us <- dbConnect(RSQLite::SQLite(), "us_elections.sqlite")
+
 ```
 
 
@@ -187,7 +206,7 @@ Imagine this as a clone now. We can data in and out
 
 ```{r}
 
-dbWriteTable(us, "candidates",personal,overwrite=T)
+dbWriteTable(us, "personal",personal,overwrite=T)
 
 # Check what we have now 
 dbListTables(us)
@@ -196,10 +215,8 @@ dbListTables(us)
 
 ## The SQL Language
 
-
 FROM == [] or $ # describes an object
 AS   == aliasing (change the names inside a query to make it shorter i.e)
-
 
 SELECT == r[,i] # selects columns
 WHERE == r[i,]  # Selects rows based on logic
@@ -240,16 +257,20 @@ Structure of a request:
     COMMAND *
     FROM the_table_you_want; 
     
-    
 ```{r}
 
 
+personal$First.Name
+
 dbGetQuery(us, ' 
            SELECT "First.Name" 
-           FROM candidates;                 
+           FROM personal;                 
                               ')              
 
 ```
+
+
+
 ```{r}
 dbGetQuery(us, ' 
            SELECT "First.Name","Name" 
@@ -259,6 +280,8 @@ dbGetQuery(us, '
 
 
 ```{r}
+
+personal[personal$Party=="Rep",1:2]
 
 dbGetQuery(us, ' 
            SELECT "First.Name","Name" 
@@ -269,13 +292,12 @@ dbGetQuery(us, '
 
 As you can see, this is quite intuitive and can be used to custom tailor your access just as in R itself.
 
-
 Of course, you can just extract the whole table into a dataframe again using 
 ```{r}
 
 df2<-dbGetQuery(us, ' 
            SELECT *
-           FROM candidates;')                
+           FROM personal;')                
 
 ```
 and do the data operations in R.
@@ -288,15 +310,14 @@ us <- dbConnect(RSQLite::SQLite(), "election_main.sqlite")
 dbListTables(us)
 
 ## define the core database 
-dbWriteTable(us, "twitteraccounts",account)
-dbWriteTable(us, "campaignfinance",candidates)
+dbWriteTable(us, "twitteraccounts",accounts,overwrite=T)
+dbWriteTable(us, "campaignfinance",candidates,overwrite=T)
 dbListTables(us)
+
 
 
 #Say bye bye and close the connection
 
-
-dbDisconnect(us)
 
 ```
 
@@ -311,3 +332,100 @@ Next week, we will combine this data using keys, do create datasets from scratch
 
 
 
+
+
+### Creating Contraints
+
+Up until now, we created tables by importing it directly from R. However, with relational databases, we can give the columns specific meanings inside the data structure, as keys or constraints. They allow us to exactly control what happens in a dataset. 
+
+To do so, we need to create tables with contraints
+
+```{r}
+dbExecute(us,"DROP TABLE twaccounts;")
+
+
+dbExecute(us,"CREATE TABLE twaccounts(
+tweet_id INTEGER,
+user_id INTEGER,
+screen_name TEXT,
+name TEXT);")
+
+
+
+```
+
+Cast 
+
+```{r}
+dbExecute(us,
+"SELECT transaction_date, 
+ amount + CAST(fee AS integer) AS net_amount 
+ FROM transactions;")
+
+```
+
+### Primary Keys
+
+More importantly, it allows us to create 
+
+
+```{r}
+
+dbExecute(us,"DROP TABLE twaccounts;")
+
+dbExecute(us,"CREATE TABLE twaccounts(
+tweet_id INTEGER PRIMARY KEY,
+user_id INTEGER,
+screen_name TEXT,
+name TEXT);")
+
+```
+
+Task 1: Choose the important variables of your group's data set and create an empty table in your copy of the database. 
+
+Send me the code.
+
+#to do: data types, create table
+# Groupwork: make your dataset workable
+# send me the code
+
+
+Some politicians have several twitter accounts, which means we can't use the individual key of Twitter, as we connect them to an individual candidate from 0 to 2 times. We therefore add a foreign key to the twitter data which uniquely identifies the candidate. 
+
+```{r}
+
+
+
+
+```
+
+
+Insert Append?
+
+```{r}
+### Import your data into the table
+
+dbExecute(us,"INSERT INTO twitteraccounts (transaction_date,   amount, fee) 
+VALUES ('2018-24-09', 5454, '30');
+
+SELECT *
+FROM transactions;")
+
+```
+
+
+
+## Remote Data Bases 
+
+
+
+
+### Adding data 
+
+
+
+### Formualting Requests
+
+
+
+``{r}

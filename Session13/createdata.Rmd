@@ -50,8 +50,8 @@ Let's try:
 
 ```{r}
 
-db_user <- 'student3'
-db_password <- 'elite'
+db_user <- ''
+db_password <- ''
 db_name <- 'congress'
 db_host <- '35.193.111.129' # our server access
 db_port <- 3306
@@ -71,13 +71,7 @@ Requesting the data for your questions!
 
 ## Requests
 
-
-
-
-
 Getting data out of single data sets
-
-
 
 Select
 
@@ -94,47 +88,49 @@ If you want to run any kind of text analysis, make sure you run this line and re
 
 pres$text<-iconv(pres$text,"UTF-8","windows-1252")
 
-
 ```
 
-which
+
 ```{r}
+
+dems<-pres[pres$Party=="Dem",]
 
 dems<-dbGetQuery(us,'SELECT * 
                  FROM candidates
-                 WHERE Party = "Dem";'              )
+                 WHERE Party = "Dem";')
 
 ```
 
 ## Join Operations 
 
 ```{r}
+
+#z<-merge(x,y,by.x="screen_name",by.y="twitter_name",all.y=T)
+
 twjoin<-dbGetQuery(us,'SELECT * FROM candidates
 LEFT JOIN twaccounts ON candidates.twitter1 = twaccounts.screen_name;')
 
-accounts$screen_name
 
 cands<-dbGetQuery(us,'SELECT * 
                  FROM candidates
 ;'              )
 
 
+
+
+dbListTables(us)
+
+cands<-dbGetQuery(us,'SELECT * 
+                 FROM rec_congress;
+;'              )
+
+
+
+
+
+
+
 ```
-
-
-## Creating your Dataset from SQL
-
-
-```{r}
-
-
-
-
-``` 
-
-
-
-
 
 As we now have access toa combined (yet still badly merged dataset) we can run a first set of nice visualizations and empirical tests. 
 
@@ -155,13 +151,13 @@ R has an incredible range of tools, from simple baseR, over ggplot2 to interacti
 Today, we start in base, but feel free to venture into the tidyverse. 
 
 
+
 # Scatterplot
 
 A first nice way to visualize data is a scatterplot. Let's take a look at two continous variables, follower count and the number of tweets the account has sent.
 
 
 ```{r}
-
 plot(accounts$followers_count,accounts$statuses_count)
 
 
@@ -171,9 +167,7 @@ As we can see, there are some extreme outliers. As Corona experienced students, 
 Taking the log of both varibales allows us to oberserve a nice linear relationship, perfect to do some premilimary analysis on.
 
 ```{r}
-
 plot(log(accounts$followers_count),log(accounts$statuses_count))
-
 
 ```
 
@@ -200,10 +194,13 @@ accounts$Party<-ifelse(accounts$Party!="Dem" & accounts$Party!="Rep","other",acc
 
 ## turn it into a factor
 accounts$Party<-as.factor(as.character(accounts$Party))
+
+
 ```
 
 Now, let us plot again by party color
 ```{r}
+
 plot(log(accounts$followers_count),log(accounts$statuses_count),
      ylab="Logged Tweets",
      xlab="Logged Followers",
@@ -216,39 +213,36 @@ plot(log(accounts$followers_count),log(accounts$statuses_count),
   # which color do we give to each party 
 
 head(accounts$Party)
-# col= c('red',"yellow","blue)
+# col= c('blue',"yellow","red")
       #    |      |         |
 # Levels: Dem   other      Rep 
 
 ```
 Additionally to colors, we can also manipulate the type of dot we put in there!
+
 In r, there are 20 different point styles you can find here http://www.sthda.com/english/wiki/r-plot-pch-symbols-the-different-point-shapes-available-in-r and in the R documenatiom.
 
 
 Following the same logic as with colors, we can now add pointstyles to the plot, depending on a variable. We choose incumbency.
 ```{r}
 
-
 accounts$Incumbent<-as.factor(as.character(accounts$Incumbent))
 
-levels(accounts$Incumbent)
 ## as you can see, the data is still a bit messy. 
 ## I suppose now that "" is a yes <- ;)
-
 
 plot(log(accounts$followers_count),log(accounts$statuses_count),
      ylab="Logged Tweets",
      xlab="Logged Followers",
      main="Tweets and Followers",
      col=c("red","yellow","blue")[accounts$Party]
-     ,pch=c(19,1,1,19)[as.factor(accounts$Incumbent)]
+     ,pch=c(20,4,4,20)[as.factor(accounts$Incumbent)]
      )
 
 ```
 As we can see by visual inspection, incumbents are way more successfully on Twitter and also more active. 
 
 We can further visualize this by for example changing the size of these points using cex.
-
 
 ```{r}
 
@@ -275,7 +269,13 @@ plot(log(accounts$followers_count),log(accounts$statuses_count),
      )
 ## this is a so called formula notation. With the ~ you tell R that the dependent variable is on the left side. As you see here, we had to shift it around and put the statuses count to the left side instead. 
 
-abline(lm(log(accounts$statuses_count)~log(accounts$followers_count)))
+accounts<-accounts[accounts$followers_count>0,]
+accounts<-accounts[accounts$statuses_count>0,]
+
+abline(
+  lm(
+  log(accounts$statuses_count)~log(accounts$followers_count))
+  )
 
 
 ```
@@ -285,6 +285,9 @@ abline(lm(log(accounts$statuses_count)~log(accounts$followers_count)))
 ```{r}
 # let's choose 10 random names
 chosen<-accounts[sample(nrow(accounts),10),]
+
+chosen<-accounts
+
 
 # call our plot
 plot(log(accounts$followers_count),log(accounts$statuses_count),
@@ -300,8 +303,6 @@ plot(log(accounts$followers_count),log(accounts$statuses_count),
         # tell the computer where the points are      and what to put there
 text(log(chosen$followers_count),log(chosen$statuses_count),labels=chosen$Name)
 
-
-
 ```
 
 # Barplot
@@ -310,7 +311,7 @@ We can also do simple barplots: Do not forget the table  command in between.
 
 ```{r}
 
-barplot(table(accounts$Party),col=c("blue","yellow","red"))
+barplot(table(accounts$Party,accounts$Incumbent),col=c("blue","yellow","red"))
 
 
 ```
@@ -321,8 +322,9 @@ To understand variable distributions of continuous variables, histograms are ver
 
 ```{r}
 
-hist(accounts$followers_count,breaks=100)
+hist(log(accounts$followers_count),breaks=100)
 
+hist(as.Date(accounts$created_at),breaks=100)
 
 ```
 
@@ -355,7 +357,6 @@ t.test(log(accounts$statuses_count)~accounts$Party=="Dem",na.rm=T)
 ```
 
 
-
 # Linear Regression
 
 More typical are linear models. First, let's remove all the 0es, since our dv has to be logged, and the regression won't accept infinites.
@@ -368,8 +369,13 @@ accounts<-accounts[accounts$statuses_count>0,]
 
 Again, we need the formula notation.
 ```{r}
+
 mod1<-lm(log(accounts$followers_count)~accounts$Party)
 summary(mod1)
+
+plot(mod1$residuals~predict(mod1))
+
+save(mod1,file="regressionmodel1.rdata")
 ```
 
 We can add IV's by using the +
@@ -393,8 +399,10 @@ If your dependent variable is binary, we have use logistic regression!
 
 
 A typical binary var is whether a candidate has a twitter account
+
 ```{r}
 twjoin$has_account<-ifelse(is.na(twjoin$twitter1),0,1)
+
 ``` 
 
 We assume that incumbents are more likely to twitter. Let's test. 
@@ -409,7 +417,8 @@ twjoin$Party<-as.factor(as.character(twjoin$Party))
 
 table(twjoin$Incumbent)
 
-twjoin$Incumbent<-ifelse(twjoin$Incumbent=="","yes",twjoin$Incumbent)
+
+twjoin$Incumbent<-ifelse(twjoin$Incumbent=="","no",twjoin$Incumbent)
 twjoin$Incumbent<-ifelse(twjoin$Incumbent=="no ","no",twjoin$Incumbent)
 twjoin$Incumbent<-ifelse(twjoin$Incumbent=="not","no",twjoin$Incumbent)
 twjoin$Incumbent<-ifelse(twjoin$Incumbent=="Sex","no",twjoin$Incumbent)
